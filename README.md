@@ -1,5 +1,11 @@
 # Launchpad Pro
-Open source firmware for the Novation Launchpad Pro grid controller
+Open source firmware for the Novation Launchpad Pro grid controller!  By customising this code, you can:
+
+- Implement your own unique standalone modes
+- Create chorders, sequencers, light shows, games and more
+- Learn a little about firmware development!
+
+You definitley need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
 # Philosophy
 We could have released the full source for the factory shipping firmware, but we've decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
@@ -33,12 +39,13 @@ The most crucial parts of the API are:
 
 - Recieving messages from the pads and buttons
 - Writing colours to the LEDs
-- Sending and receiving messages from the USB and MIDI ports
+- Sending and receiving messages from the MIDI ports
 - Receiving a tick message to drive timing based code
 
 Up for debate:
 
-- Flash read / write access
+- USB MIDI support (why not just implement on the host in programmer mode using the factory firmware?)
+- Flash memory read / write access
 - Setup button behaviour
 
 # Debugging
