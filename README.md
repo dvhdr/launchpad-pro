@@ -32,7 +32,18 @@ At the command prompt, simply type `make`
 This will generate the firmware launchpad_pro.syx file in the build directory.  You can then upload this to your Launchpad Pro from the host!
 
 # Uploading to a Launchpad Pro
-Bootloader firmware update instructions here (Sysex Librarian / MIDI-OX / ...?)
+Now you've got some nice new code to run. To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you know better than I do!
+
+I won't describe how to use these tools, I'm sure you already know - and if you don't, their documentation is better than mine!  Here's what you need to do:
+
+1. Unplug your Launchpad Pro
+2. Hold the "setup" button down while connecting it to your host via USB (ensure it's connected to the host, and not to a virtual machine!)
+3. The unit will start up in "bootloader" mode
+4. "play" your launchpad_pro.syx file to the device - it should breifly scroll "updateing..." across the grid
+5. Wait for the update to complete, and for the device to reboot!
+
+# Bricked it!
+Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above. Simply repeat the process with the shipping firmware image (Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.
 
 # API
 The most crucial parts of the API are:
