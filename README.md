@@ -1,19 +1,19 @@
 # Launchpad Pro
 Open source firmware for the Novation Launchpad Pro grid controller!  By customising this code, you can:
 
-- Implement your own unique standalone modes
+- Implement your own unique standalone apps
 - Create chorders, sequencers, light shows, games and more
-- Learn a little about firmware development!
+- Learn a little about software development!
 
-You definitley need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
+You'll definiteley need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
 # Philosophy
-We could have released the full source for the factory shipping firmware, but we've decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
+We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
 
-- There is no value in customising low level routines such as LED multiplexing or ADC scanning - this code has been carefully tweaked over many months to deliver the best results, and is not something you'd want to tweak.  I'm prepared to be convinced otherwise!
-- There is very little value in customising main() or other low level features, and again these things are hard to do well.
-- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the support calls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality.
-- If we left the Ableton integration and menu structure in place, open firmware developers would have to work around it.  They would also potentially consume precious RAM/CPU resources.  I've a feeling this isn't what you'd want, but again, we're interested to hear your feedback.
+- There is no value in customising low level routines such as LED multiplexing or ADC scanning - this code has been carefully tweaked over many months to deliver the best results, and is not something you'd want to mess with.
+- There is very little value in customising main() or other low level features, and again these things are hard to do well.  Interrupt priorities? No.
+- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phonecalls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality.
+- If we left the Ableton integration and menu structure in place, open firmware developers would have to work around it.  They would also potentially consume precious RAM/CPU resources.  I've a feeling this isn't what you'd want, but we're interested to hear your feedback.
 - Licensing requirements for the CMSIS library version we use are ambiguous.  Yes, we could port to the public version, but why bother, given the above reasoning - I'd prefer to spend my time on good documentation and examples.  As such, all the CMSIS code is compiled into launchpad_pro.a, and we do not need to distribute the headers.
 
 I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging the process too](http://dvhdr.tumblr.com/) if you'd like to read my musings.
@@ -21,29 +21,45 @@ I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging 
 # Installation
 This project uses [Vagrant](https://www.vagrantup.com/) to manage the build environment. As such, you need to:
 
-1. Install [Vagrant](https://www.vagrantup.com/)
-2. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)(or another virtualisation platform of your choice)
-3. `vagrant up`
+1. Clone this repository
+2. Install [Vagrant](https://www.vagrantup.com/)
+3. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+4. `vagrant up` to create a brand new development virtual machine, all configured and ready to build the firmware!
 
 # Building
-SSH into the Vagrant "box" by doing `vagrant up`
-At the command prompt, simply type `make`
+You can build the app in one of two ways.  In the spirit of experimenation, I've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by hacking the Vagrantfile). 
 
-This will generate the firmware launchpad_pro.syx file in the build directory.  You can then upload this to your Launchpad Pro from the host!
+# To use the command line interface:
+1. SSH into the Vagrant "box" by doing `vagrant ssh`
+2. At the command prompt, simply type `make`
+
+# To build using the Eclipse GUI
+
+1. Log in to the Ubuntu GUI (the password is, as is the convention, "vagrant").
+2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
+3. This is the annoying bit.  I can't figure out how to store the project in source control, so you need to import it.
+4. In Eclipse, choose "File->Import..."
+5. Under "C/C++", choose "Makefile project with existing code"
+6. Give the project any name you like (launchpad?)
+7. Under "Existing code location" choose /vagrant
+8. Hit Finish. You should now see your project on the left!
+9. Click the build icon at the top, and wait while the project builds.
+
+Either of the above methods will generate the firmware launchpad_pro.syx file in the /build directory.  You can then upload this to your Launchpad Pro from the host!
 
 # Uploading to a Launchpad Pro
-Now you've got some nice new code to run. To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you know better than I do!
+Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
 
-I won't describe how to use these tools, I'm sure you already know - and if you don't, their documentation is better than mine!  Here's what you need to do:
+I won't describe how to use these tools, I'm sure you already know - and if you don't, their documentation is superior to mine!  Here's what you need to do:
 
 1. Unplug your Launchpad Pro
-2. Hold the "setup" button down while connecting it to your host via USB (ensure it's connected to the host, and not to a virtual machine!)
+2. Hold the "Setup" button down while connecting it to your host via USB (ensure it's connected to the host, and not to a virtual machine!)
 3. The unit will start up in "bootloader" mode
-4. "play" your launchpad_pro.syx file to the device - it should breifly scroll "updateing..." across the grid
+4. Send your launchpad_pro.syx file to the device MIDI port - it should briefly scroll "updating..." across the grid.
 5. Wait for the update to complete, and for the device to reboot!
 
 # Bricked it!
-Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above. Simply repeat the process with the shipping firmware image (Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.
+Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
 
 # API
 The most crucial parts of the API are:
@@ -51,18 +67,14 @@ The most crucial parts of the API are:
 - Recieving messages from the pads and buttons
 - Writing colours to the LEDs
 - Sending and receiving messages from the MIDI ports
-- Receiving a tick message to drive timing based code
+- Receiving a tick message to drive timer based code
 
-Up for debate:
-
-- USB MIDI support (why not just implement on the host in programmer mode using the factory firmware?)
-- Flash memory read / write access
-- Setup button behaviour
+The best way to learn about these is to read the documentation in app.h, and to study the example code!
 
 # Debugging
-We decided not to support or encourage using a JLink or similar for debugging, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
+We decided not to support or encourage using a hardware debugger, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
 
 Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages.  FWIW, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
-If you want to test code in detail, we suggest developing it on a host (we'd love to release our simulator environment at a later stage, but there are currently no plans to do so).
+If you want to test code in detail, we suggest developing it on a host.  I want to develop a host app which presents the same API to app.c, but which forwards all messages to and from the hardware Launchpad Pro via MIDI - that way you'll be able to debug most code on the host very nicely.
 

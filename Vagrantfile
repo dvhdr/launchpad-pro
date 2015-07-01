@@ -21,11 +21,6 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision :shell, path: "bootstrap.sh"
 
-  # use the desktop!
-  #config.vm.provider :virtualbox do |vb|
-  #  vb.gui = true
-  #end
-
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
@@ -50,14 +45,17 @@ Vagrant.configure(2) do |config|
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  # config.vm.provider "virtualbox" do |vb|
-  #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
-  #
-  #   # Customize the amount of memory on the VM:
-  #   vb.memory = "1024"
-  # end
-  #
+  config.vm.provider "virtualbox" do |vb|
+     # Display the VirtualBox GUI when booting the machine
+     vb.gui = true
+  
+     # Customize the amount of memory on the VM:
+     vb.memory = "2048"
+
+     # let’s have something usable for proper development
+     vb.cpus = 2
+  end
+  
   # View the documentation for the provider you are using for more
   # information on available options.
 
