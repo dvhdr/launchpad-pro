@@ -3,7 +3,7 @@ Open source firmware for the Novation Launchpad Pro grid controller!  By customi
 
 - Implement your own unique standalone apps
 - Create chorders, sequencers, light shows, games and more
-- Learn a little about software development!
+- Have fun!
 
 You'll definitely need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
@@ -90,5 +90,7 @@ If do you want to debug interactively (and of course you do), you can use the si
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
 
-If you only want to build usingthe command line, you might want to run your Vagrant box headless, which you can do by modifying the Vagrantfile: `vb.gui = false`.  You can also add more CPUs, RAM etc. if you want.
+If you only want to build using the command line, you might want to run your Vagrant box headless, which you can do by modifying the Vagrantfile: `vb.gui = false`.  You can also add more CPUs, RAM etc. if you want.
+
+If prefer, you can install the gcc-arm toolchain on your local machine, or you might already have it.  You can find all you need [here](http://gnuarmeclipse.livius.net/).
 
