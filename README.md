@@ -5,16 +5,16 @@ Open source firmware for the Novation Launchpad Pro grid controller!  By customi
 - Create chorders, sequencers, light shows, games and more
 - Learn a little about software development!
 
-You'll definiteley need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
+You'll definitely need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
 This project is still at an early stage, and no "interesting" example apps have yet been developed.  You might want to hang on until there's something more detailed before you get stuck in.  Or not!
 
 # Philosophy
-We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
+We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad Pro, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
 
 - There is no value in customising low level routines such as LED multiplexing or ADC scanning - this code has been carefully tweaked over many months to deliver the best results, and is not something you'd want to mess with.
 - There is very little value in customising main() or other low level features, and again these things are hard to do well.  Interrupt priorities? No.
-- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phonecalls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality. In addition, the "Live" USB MIDI port has been removed, and the device has a different name and USB PID.
+- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phone calls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality. In addition, the "Live" USB MIDI port has been removed, and the device has a different name and USB PID.
 - If we left the Ableton integration and menu structure in place, open firmware developers would have to work around it.  They would also potentially consume precious RAM/CPU resources.  I've a feeling this isn't what you'd want, but we're interested to hear your feedback.
 - Licensing requirements for the CMSIS library version we use are ambiguous.  Yes, we could port to the public version, but why bother, given the above reasoning - I'd prefer to spend my time on good documentation and examples.  As such, all the CMSIS code is compiled into launchpad_pro.a, and we do not need to distribute the headers.
 
@@ -30,13 +30,13 @@ This project uses [Vagrant](https://www.vagrantup.com/) to manage the build envi
 5. Type `vagrant up`, hit enter and grab a beverage of your choice.  It's building a lovely fresh development machine just for you!
 
 # Building
-You can build the app in one of two ways.  In the spirit of experimenation, I've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by modifying the Vagrantfile). 
+Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by modifying the Vagrantfile). 
 
-# -To use the command line interface:
+#  To use the command line interface:
 1. SSH into the Vagrant "box" by doing `vagrant ssh`
 2. At the command prompt, simply type `make`
 
-# -To build using the Eclipse GUI
+#  To build using the Eclipse GUI
 
 1. Log in to the Ubuntu GUI (the password is, as is the convention, "vagrant").
 2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
@@ -44,7 +44,7 @@ You can build the app in one of two ways.  In the spirit of experimenation, I've
 4. In Eclipse, choose "File->Import..."
 5. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
 6. Give the project any name you like (launchpad?)
-7. Under "Existing code location" type `/vagrant`
+7. Under "Existing Code Location" type `/vagrant`
 8. Hit Finish - you should now see your project.  If not, click "Workbench" and it should appear.
 9. Click the hammer icon at the top, and wait while the project builds.
 
@@ -67,7 +67,7 @@ Don't worry - even if you upload toxic nonsense to the device, you cannot brick 
 # API
 The most crucial parts of the API are:
 
-- Recieving messages from the pads and buttons
+- Receiving messages from the pads and buttons
 - Writing colours to the LEDs
 - Sending and receiving messages from the MIDI ports
 - Receiving a tick message to drive timer based code
