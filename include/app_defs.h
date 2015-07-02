@@ -36,6 +36,10 @@
 
 // ____________________________________________________________________________
 //
+// Don't modify this file!  This declares the binary interface to the library,
+// so modifying it will probably break things.
+// ____________________________________________________________________________
+//
 // Types
 // ____________________________________________________________________________
 
@@ -52,26 +56,26 @@ typedef unsigned char  u8;
 // App structure
 // ____________________________________________________________________________
 
-#define		TYPEPAD		0
-#define		TYPESETUP	1
+#define	TYPEPAD				0
+#define	TYPESETUP			1
 
-#define		MAXLED		63
+#define	MAXLED				63
 
 // ____________________________________________________________________________
 //
 // Useful MIDI constants
 // ____________________________________________________________________________
 
-#define		NOTEON				0x90
-#define		NOTEOFF				0x80
-#define		POLYAFTERTOUCH		0xA0
-#define		CC					0xB0
-#define		CHANNELAFTERTOUCH   0xD0
-#define     SONGPOSITIONPOINTER 0xF2
-#define     MIDITIMINGCLOCK     0xF8
-#define     MIDISTART           0xFA
-#define     MIDICONTINUE        0xFB
-#define     MIDISTOP            0xFC
+#define	NOTEON				0x90
+#define	NOTEOFF				0x80
+#define	POLYAFTERTOUCH		0xA0
+#define	CC					0xB0
+#define	CHANNELAFTERTOUCH   0xD0
+#define	SONGPOSITIONPOINTER 0xF2
+#define	MIDITIMINGCLOCK     0xF8
+#define	MIDISTART           0xFA
+#define	MIDICONTINUE        0xFB
+#define	MIDISTOP            0xFC
 
 // ____________________________________________________________________________
 //
@@ -79,19 +83,22 @@ typedef unsigned char  u8;
 // ____________________________________________________________________________
 
 // USB MIDI: "Standalone" port
-#define     USBSTANDALONE       0
+#define	USBSTANDALONE		0
 
 // USB MIDI: "MIDI" port
-#define     USBMIDI		        1
+#define	USBMIDI				1
 
 // MIDI DIN port
-#define     DINMIDI      	    2
-
-
-// MIDI Jack Socket Switch IDs
-
-#define     MIDI_IN_CABLE      0
-#define     MIDI_OUT_CABLE     1
+#define	DINMIDI				2
 
 // ____________________________________________________________________________
+//
+// MIDI Jack Socket Switch IDs
+// ____________________________________________________________________________
+
+#define	MIDI_IN_CABLE		0
+#define	MIDI_OUT_CABLE		1
+
+// ____________________________________________________________________________
+
 #endif
