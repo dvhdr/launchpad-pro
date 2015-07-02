@@ -7,6 +7,8 @@ Open source firmware for the Novation Launchpad Pro grid controller!  By customi
 
 You'll definiteley need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
+This project is still at an early stage, and no "interesting" example apps have yet been developed.  You might want to hang on until there's something more detailed before you get stuck in.  Or not!
+
 # Philosophy
 We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
 
