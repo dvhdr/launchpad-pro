@@ -29,3 +29,7 @@
 
 # Debug files
 *.dSYM/
+
+# Environment
+.vagrant
+build
