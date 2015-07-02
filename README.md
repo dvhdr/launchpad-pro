@@ -14,40 +14,41 @@ We could have released the full source for the factory shipping firmware, but we
 
 - There is no value in customising low level routines such as LED multiplexing or ADC scanning - this code has been carefully tweaked over many months to deliver the best results, and is not something you'd want to mess with.
 - There is very little value in customising main() or other low level features, and again these things are hard to do well.  Interrupt priorities? No.
-- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phonecalls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality.
+- If we shipped the application firmware as-is, we'd have a support nightmare on our hands (imagine the phonecalls - my "Launchpad Pro is behaving strangely...").  Instead, we wanted to create a clear boundary between "normal" usage with Ableton, and custom firmware.  As such, Ableton integration has been removed from this firmware, as has the setup / navigation functionality. In addition, the "Live" USB MIDI port has been removed, and the device has a different name and USB PID.
 - If we left the Ableton integration and menu structure in place, open firmware developers would have to work around it.  They would also potentially consume precious RAM/CPU resources.  I've a feeling this isn't what you'd want, but we're interested to hear your feedback.
 - Licensing requirements for the CMSIS library version we use are ambiguous.  Yes, we could port to the public version, but why bother, given the above reasoning - I'd prefer to spend my time on good documentation and examples.  As such, all the CMSIS code is compiled into launchpad_pro.a, and we do not need to distribute the headers.
 
-I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging the process too](http://dvhdr.tumblr.com/) if you'd like to read my musings.
+I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging the process too](http://launchpadfirmware.tumblr.com/) if you'd like to read my musings.
 
 # Installation
 This project uses [Vagrant](https://www.vagrantup.com/) to manage the build environment. As such, you need to:
 
-1. Clone this repository
+1. Clone this repository on your host computer
 2. Install [Vagrant](https://www.vagrantup.com/)
 3. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
-4. `vagrant up` to create a brand new development virtual machine, all configured and ready to build the firmware!
+4. Open a command prompt, and navigate to the project directory
+5. Type `vagrant up`, hit enter and grab a beverage of your choice.  It's building a lovely fresh development machine just for you!
 
 # Building
-You can build the app in one of two ways.  In the spirit of experimenation, I've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by hacking the Vagrantfile). 
+You can build the app in one of two ways.  In the spirit of experimenation, I've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by modifying the Vagrantfile). 
 
-# To use the command line interface:
+# -To use the command line interface:
 1. SSH into the Vagrant "box" by doing `vagrant ssh`
 2. At the command prompt, simply type `make`
 
-# To build using the Eclipse GUI
+# -To build using the Eclipse GUI
 
 1. Log in to the Ubuntu GUI (the password is, as is the convention, "vagrant").
 2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
-3. This is the annoying bit.  I can't figure out how to store the project in source control, so you need to import it.
+3. Accept the default when Eclipse asks you for a workspace.  I can't figure out how to store the workspace in source control, so you need to import it.
 4. In Eclipse, choose "File->Import..."
-5. Under "C/C++", choose "Makefile project with existing code"
+5. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
 6. Give the project any name you like (launchpad?)
-7. Under "Existing code location" choose /vagrant
-8. Hit Finish. You should now see your project on the left!
-9. Click the build icon at the top, and wait while the project builds.
+7. Under "Existing code location" type `/vagrant`
+8. Hit Finish - you should now see your project.  If not, click "Workbench" and it should appear.
+9. Click the hammer icon at the top, and wait while the project builds.
 
-Either of the above methods will generate the firmware launchpad_pro.syx file in the /build directory.  You can then upload this to your Launchpad Pro from the host!
+Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project /build directory.  You can then upload this to your Launchpad Pro from the host!
 
 # Uploading to a Launchpad Pro
 Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
@@ -79,4 +80,7 @@ We decided not to support or encourage using a hardware debugger, as opening a L
 Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages.  FWIW, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
 If you want to test code in detail, we suggest developing it on a host.  I want to develop a host app which presents the same API to app.c, but which forwards all messages to and from the hardware Launchpad Pro via MIDI - that way you'll be able to debug most code on the host very nicely.
+
+# Vagrant tips
+When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
 
