@@ -33,3 +33,5 @@
 # Environment
 .vagrant
 build
+.project
+.cproject
