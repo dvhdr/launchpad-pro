@@ -43,7 +43,7 @@ $(SYX): $(HEX) $(HEXTOSYX) $(SIMULATOR)
 $(HEXTOSYX):
 	$(HOST_GPP) -Ofast -std=c++0x -I./$(TOOLS)/libintelhex/include ./$(TOOLS)/libintelhex/src/intelhex.cc $(TOOLS)/hextosyx.cpp -o $(HEXTOSYX)
 
-# build the simulator and run it (it's a very basic test of the code before it runs on the device!)
+# build the simulator (it's a very basic test of the code before it runs on the device!)
 $(SIMULATOR):
 	$(HOST_GCC) -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c src/app.c -o $(SIMULATOR)
 
@@ -54,10 +54,6 @@ $(ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIB)
 
 $(BUILDDIR)/%.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILDDIR)/%.o: %.s
 	mkdir -p $(dir $@)
 	$(CC) -c $(CFLAGS) $< -o $@
 
