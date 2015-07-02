@@ -65,21 +65,27 @@ I won't describe how to use these tools, I'm sure you already know - and if you 
 Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
 
 # API
-The most crucial parts of the API are:
+The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  From the HAL you can:
 
-- Receiving messages from the pads and buttons
-- Writing colours to the LEDs
-- Sending and receiving messages from the MIDI ports
-- Receiving a tick message to drive timer based code
+- Receive messages from the pads and buttons
+- Receive messages from the MIDI/USB ports
+- Receive a tick message to drive timer based code
 
-The best way to learn about these is to read the documentation in app.h, and to study the example code!
+To the HAL, your app can
+
+- Write colours to the LEDs
+- Send messages to the MIDI/USB ports
+
+The best way to learn about these is to read the documentation in app.h, and to study the (very basic) example code!
+
+Currently the HAL/app interface does not support reading or writing the flash memory.
 
 # Debugging
 We decided not to support or encourage using a hardware debugger, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
 
-Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages.  FWIW, that's the way I've developed this version of the firmware - dogfooding all the way ;)
+Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages.  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
-If you want to test code in detail, we suggest developing it on a host.  I want to develop a host app which presents the same API to app.c, but which forwards all messages to and from the hardware Launchpad Pro via MIDI - that way you'll be able to debug most code on the host very nicely.
+If do you want to debug interactively (and of course you do), you can use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump.  If you want to test particular button presses or MIDI messages, just modify it to send those messages to your app, and debug away.  Yes, it's rudimental - wiring it up to the device over MIDI for interactive testing would be fab!
 
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
