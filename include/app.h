@@ -87,14 +87,14 @@ void hal_send_midi(u8 port, u8 status, u8 data1, u8 data2);
  * (F0 ... F7) and must not exceed 320 bytes.
  *
  * @param port - which port to send the message to - can be USBSTANDALONE, USBMIDI or DINMIDI.
- * @param data - pointer to array containing sysex data.
- * @param length - must not exceed 320 bytes.
+ * @param data - pointer to array containing sysex data. Can be on the stack.
+ * @param length - must not exceed 320 bytes, behaviour undefined if it does.
  */
 void hal_send_sysex(u8 port, const u8* data, u16 length);
 
 // ____________________________________________________________________________
 //
-// Interface from the hardware (implemented in app.c)
+// Callbacks from the hardware (implemented in your app.c)
 // ____________________________________________________________________________
 
 /**
@@ -125,7 +125,7 @@ void app_midi_event(u8 port, u8 status, u8 d1, u8 d2);
  * a maximum message size of 320 bytes, messages larger than this will not work.
  *
  * @param port - the port the message was received from - USBSTANDALONE, USBMIDI or DINMIDI.
- * @param data - pointer to array containing sysex data.
+ * @param data - pointer to array containing sysex data.  Only valid in the scope of this callback.
  * @param length - the amount of data received.
  */
 void app_sysex_event(u8 port, u8 * data, u16 count);
