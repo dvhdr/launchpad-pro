@@ -30,7 +30,7 @@ This project uses [Vagrant](https://www.vagrantup.com/) to manage the build envi
 5. Type `vagrant up`, hit enter and grab a beverage of your choice.  It's building a lovely fresh development machine just for you!
 
 # Building
-Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.  (if you do, you might also want to run your Vagrant box headless, which you can do by modifying the Vagrantfile). 
+Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.
 
 #  To use the command line interface:
 1. SSH into the Vagrant "box" by doing `vagrant ssh`
@@ -65,13 +65,13 @@ I won't describe how to use these tools, I'm sure you already know - and if you 
 Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
 
 # API
-The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  From the HAL you can:
+The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  The HAL calls into your app to:
 
-- Receive messages from the pads and buttons
+- Receive user events from the pads and buttons
 - Receive messages from the MIDI/USB ports
 - Receive a tick message to drive timer based code
 
-To the HAL, your app can
+By calling into the HAL, your app can
 
 - Write colours to the LEDs
 - Send messages to the MIDI/USB ports
@@ -83,10 +83,12 @@ Currently the HAL/app interface does not support reading or writing the flash me
 # Debugging
 We decided not to support or encourage using a hardware debugger, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
 
-Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages.  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
+Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages (though hopefully no need for a 'scope!).  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
 If do you want to debug interactively (and of course you do), you can use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump.  If you want to test particular button presses or MIDI messages, just modify it to send those messages to your app, and debug away.  Yes, it's rudimental - wiring it up to the device over MIDI for interactive testing would be fab!
 
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
+
+If you only want to build usingthe command line, you might want to run your Vagrant box headless, which you can do by modifying the Vagrantfile: `vb.gui = false`.  You can also add more CPUs, RAM etc. if you want.
 
