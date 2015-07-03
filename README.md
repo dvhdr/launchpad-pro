@@ -27,7 +27,9 @@ This project uses [Vagrant](https://www.vagrantup.com/) to manage the build envi
 2. Install [Vagrant](https://www.vagrantup.com/)
 3. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 4. Open a command prompt, and navigate to the project directory
-5. Type `vagrant up`, hit enter and grab a beverage of your choice.  It's building a lovely fresh development machine just for you!
+5. Type `vagrant up`, hit enter and grab a beverage of your choice.  Maybe two - it is building a lovely fresh development machine just for you!
+
+Note that it does take quite a while to download everything.  If you have a poor internet connection, ummm, find a better one :)
 
 # Building
 Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.
@@ -38,15 +40,19 @@ Once your new "box" is up and running, you can build the app in one of two ways.
 
 #  To build using the Eclipse GUI
 
-1. Log in to the Ubuntu GUI (the password is, as is the convention, "vagrant").
+Make sure you wait until the `vagrant up` command has completed before logging in to your VM.  The GUI appears long before the provisioning script finishes.
+
+1. Log in to the Ubuntu GUI (the password is, as is the convention, **vagrant**).
 2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
 3. Accept the default when Eclipse asks you for a workspace.  I can't figure out how to store the workspace in source control, so you need to import it.
-4. In Eclipse, choose "File->Import..."
-5. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
-6. Give the project any name you like (launchpad?)
-7. Under "Existing Code Location" type `/vagrant`
-8. Hit Finish - you should now see your project.  If not, click "Workbench" and it should appear.
-9. Click the hammer icon at the top, and wait while the project builds.
+4. Click "Workbench" at the Ecliplse startup screen.
+5. In Eclipse, choose "File->Import..."
+6. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
+7. Give the project any name you like (launchpad?)
+8. Under "Existing Code Location" type `/vagrant`.  The toolchain isn't important, the compiler is part of the Makefile.
+9. Hit Finish - you should now see your project.
+10. Select your project by clicking on it.
+11. Click the hammer icon at the top, and wait while the project builds.
 
 Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project /build directory.  You can then upload this to your Launchpad Pro from the host!
 
@@ -93,4 +99,8 @@ When you're done developing, simply type `vagrant suspend` to halt your VM witho
 If you only want to build using the command line, you might want to run your Vagrant box headless, which you can do by modifying the Vagrantfile: `vb.gui = false`.  You can also add more CPUs, RAM etc. if you want.
 
 If prefer, you can install the gcc-arm toolchain on your local machine, or you might already have it.  You can find all you need [here](http://gnuarmeclipse.livius.net/).
+
+
+
+It appears that VirtualBox does not yet work on Windows 10.
 
