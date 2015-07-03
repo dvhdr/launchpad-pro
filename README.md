@@ -29,7 +29,7 @@ This project uses [Vagrant](https://www.vagrantup.com/) to manage the build envi
 4. Open a command prompt, and navigate to the project directory
 5. Type `vagrant up`, hit enter and grab a beverage of your choice.  Maybe two - it is building a lovely fresh development machine just for you!
 
-Note that it does take quite a while to download everything.  If you have a poor internet connection, ummm, find a better one :)
+If you have a poor internet connection, ummm, find a better one :)
 
 # Building
 Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.
@@ -54,7 +54,7 @@ Make sure you wait until the `vagrant up` command has completed before logging i
 10. Select your project by clicking on it.
 11. Click the hammer icon at the top, and wait while the project builds.
 
-Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project /build directory.  You can then upload this to your Launchpad Pro from the host!
+Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project `build` directory.  You can then upload this to your Launchpad Pro from the host!
 
 # Uploading to a Launchpad Pro
 Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
@@ -100,7 +100,6 @@ If you only want to build using the command line, you might want to run your Vag
 
 If prefer, you can install the gcc-arm toolchain on your local machine, or you might already have it.  You can find all you need [here](http://gnuarmeclipse.livius.net/).
 
-
-
 It appears that VirtualBox does not yet work on Windows 10.
 
+If your connection drops out while updating the Vagrant box, you can get stuck, unable to `vagrant up`.  To resolve, you need to delete the temp file - `~/vagrant.d/tmp`.
