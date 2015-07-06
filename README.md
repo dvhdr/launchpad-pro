@@ -95,6 +95,15 @@ Instead, you're going to have to do things the old fashioned way - by blinking L
 
 If do you want to debug interactively (and of course you do), you can use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump.  If you want to test particular button presses or MIDI messages, just modify it to send those messages to your app, and debug away.  Yes, it's rudimental - wiring it up to the device over MIDI for interactive testing would be fab!
 
+To debug the simulator interactively in Eclipse:
+
+1. Click the down arrow next to the little "bug" icon in the toolbar
+2. Choose "Debug configurations..."
+3. Right click "C/C++ Application" and choose "New...:
+4. Under "C/C++ Application" click Browse... and locate the simulator binary at `/vagrant/build/simulator`
+5. Hit "Debug"!
+
+
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
 
