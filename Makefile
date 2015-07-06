@@ -47,7 +47,7 @@ $(HEXTOSYX):
 
 # build the simulator (it's a very basic test of the code before it runs on the device!)
 $(SIMULATOR):
-	$(HOST_GCC) -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c $(SOURCES) -o $(SIMULATOR)
+	$(HOST_GCC) -g3 -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c $(SOURCES) -o $(SIMULATOR)
 
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex $< $@
