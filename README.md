@@ -64,8 +64,10 @@ I won't describe how to use these tools, I'm sure you already know - and if you 
 1. Unplug your Launchpad Pro
 2. Hold the "Setup" button down while connecting it to your host via USB (ensure it's connected to the host, and not to a virtual machine!)
 3. The unit will start up in "bootloader" mode
-4. Send your launchpad_pro.syx file to the device MIDI port - it should briefly scroll "updating..." across the grid.
+4. Send your launchpad_pro.syx file to the device MIDI port - it will briefly scroll "upgrading..." across the grid.
 5. Wait for the update to complete, and for the device to reboot!
+
+Tip - set the delay between sysex messages to as low a value as possible, so you're not waiting about for ages while the firmware uploads!
 
 # Bricked it!
 Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
@@ -103,3 +105,6 @@ If prefer, you can install the gcc-arm toolchain on your local machine, or you m
 It appears that VirtualBox does not yet work on Windows 10.
 
 If your connection drops out while updating the Vagrant box, you can get stuck, unable to `vagrant up`.  To resolve, you need to delete the temp file - `~/vagrant.d/tmp`.
+
+# Firmware development tips
+OK - we're not going to need to use the MISRA rules, but there are a few things to avoid.  Dynamic memory allocation is a no (well it will work, but it's best avoided). Floating point will work, but it's implemented in software and will be slooooow.   C++ ought to work, but you'll definitely want to avoid exceptions and RTTI!
