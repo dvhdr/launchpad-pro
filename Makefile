@@ -4,18 +4,20 @@ TOOLS = tools
 
 SOURCES += src/app.c
 
+INCLUDES += -Iinclude -I
+
+LIB = lib/launchpad_pro.a
+
 OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES))))
 
-INCLUDES += -Iinclude \
--I\
-
+# output files
 SYX = $(BUILDDIR)/launchpad_pro.syx
-LIB = lib/launchpad_pro.a
 ELF = $(BUILDDIR)/launchpad_pro.elf
 HEX = $(BUILDDIR)/launchpad_pro.hex
 HEXTOSYX = $(BUILDDIR)/hextosyx
 SIMULATOR = $(BUILDDIR)/simulator
 
+# tools
 HOST_GPP = g++
 HOST_GCC = gcc
 CC = arm-none-eabi-gcc
@@ -39,13 +41,13 @@ $(SYX): $(HEX) $(HEXTOSYX) $(SIMULATOR)
 	./$(SIMULATOR)
 	./$(HEXTOSYX) $(HEX) $(SYX)
 
-# build the tool for conversion of ELF files to sysex ready for upload to the unit
+# build the tool for conversion of ELF files to sysex, ready for upload to the unit
 $(HEXTOSYX):
 	$(HOST_GPP) -Ofast -std=c++0x -I./$(TOOLS)/libintelhex/include ./$(TOOLS)/libintelhex/src/intelhex.cc $(TOOLS)/hextosyx.cpp -o $(HEXTOSYX)
 
 # build the simulator (it's a very basic test of the code before it runs on the device!)
 $(SIMULATOR):
-	$(HOST_GCC) -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c src/app.c -o $(SIMULATOR)
+	$(HOST_GCC) -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c $(SOURCES) -o $(SIMULATOR)
 
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex $< $@
