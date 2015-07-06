@@ -36,7 +36,7 @@ LDFLAGS += -T$(LDSCRIPT) -u _start -u _Minimum_Stack_Size  -mcpu=cortex-m3 -mthu
 
 all: $(SYX)
 
-# build the final sysex file from the ELF
+# build the final sysex file from the ELF - run the simulator first
 $(SYX): $(HEX) $(HEXTOSYX) $(SIMULATOR)
 	./$(SIMULATOR)
 	./$(HEXTOSYX) $(HEX) $(SYX)
@@ -55,9 +55,13 @@ $(HEX): $(ELF)
 $(ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIB)
 
+DEPENDS := $(OBJECTS:.o=.d)
+
+-include $(DEPENDS)
+
 $(BUILDDIR)/%.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) -MMD -o $@ $<
 
 clean:
 	rm -rf $(BUILDDIR)
