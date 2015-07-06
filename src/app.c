@@ -120,7 +120,7 @@ void app_cable_event(u8 type, u8 value)
 void app_timer_event()
 {
 	// example - send MIDI clock at 125bpm
-	static const int TICK_MS = 20;
+#define TICK_MS 20
 	
 	static u8 ms = TICK_MS;
 	
