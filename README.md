@@ -23,7 +23,7 @@ I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging 
 # Installation
 This project uses [Vagrant](https://www.vagrantup.com/) to manage the build environment. As such, you need to:
 
-1. Clone this repository on your host computer (use the GitHub app - if using the command line, you'll have to `git submodule update --recursive` after cloning - whhhyyy?).
+1. Clone this repository on your host computer (if using the command line, make sure you `git clone --recursive`).
 2. Install [Vagrant](https://www.vagrantup.com/)
 3. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 4. Open a command prompt, and navigate to the project directory
