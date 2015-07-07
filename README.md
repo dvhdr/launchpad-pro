@@ -40,7 +40,7 @@ Once your new "box" is up and running, you can build the app in one of two ways.
 
 #  To build using the Eclipse GUI
 
-Make sure you wait until the `vagrant up` command has completed before logging in to your VM.  The GUI appears long before the provisioning script finishes.
+**Make sure you wait until the `vagrant up` command has fully completed** before logging in to your VM.  The GUI appears long before the provisioning script finishes.  If you don't, you'll have to log out and log back in again before Eclipse can see the correct path.
 
 1. Log in to the Ubuntu GUI (the password is, as is the convention, **vagrant**).
 2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
