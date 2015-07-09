@@ -72,7 +72,7 @@ Tip - set the delay between sysex messages to as low a value as possible, so you
 # Bricked it!
 Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
 
-# API
+# The API
 The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  The HAL calls into your app to:
 
 - Receive user events from the pads and buttons
@@ -103,6 +103,10 @@ To debug the simulator interactively in Eclipse:
 4. Under "C/C++ Application" click Browse... and locate the simulator binary at `/vagrant/build/simulator`
 5. Hit "Debug"!
 
+# The Hardware
+The Launchpad Pro is based around an ARM Cortex M3 from STMicroelectronics.  Specifically, an [STM32F103RBT6](http://www.st.com/web/catalog/mmc/FM141/SC1169/SS1031/LN1565/PF164487).  It's clocked at 72MHz, and has 20k RAM (I'm not sure how much of this we're using in the open build yet - should be a fair amount left but I haven't measured it).  The low level LED multiplexing and pad/switch scanning consume a fair bit of CPU time in interrupt mode, but have changed a little in the open firmware library (so again, I don't have measurements for how many cycles they're using).
+
+It has 128k of flash memory, but I'm pretty sure we won't be exposing all of it as part of this API (dangerously easy to corrupt things!).  Current thinking is to expose a few pages for use by apps, though this would still introduce risks (accidentally wearing out sectors, for example).  To be continued...
 
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
