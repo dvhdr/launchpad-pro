@@ -94,7 +94,16 @@ We decided not to support or encourage using a hardware debugger, as opening a L
 
 Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages (though hopefully no need for a 'scope!).  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
-If do you want to debug interactively (and of course you do), you can use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump.  If you want to test particular button presses or MIDI messages, just modify it to send those messages to your app, and debug away.  Yes, it's rudimental - wiring it up to the device over MIDI for interactive testing would be fab!
+If do you want to debug interactively (and of course you do), you can use the interactive desktop simulator on OS X.  
+
+1. Build the Xcode project located in `/tools/simulator`
+2. Connect your Launchpad Pro
+3. Install the factory firmware on your Launchpad Pro
+4. Debug away!
+
+Currently it only supports button presses and LED messages - there's no virtual MIDI output or aftertouch yet.  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic very nicely using Xcode!
+
+You can also use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump - more of a test harness.
 
 To debug the simulator interactively in Eclipse:
 
