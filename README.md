@@ -96,12 +96,12 @@ Instead, you're going to have to do things the old fashioned way - by blinking L
 
 If do you want to debug interactively (and of course you do), you can use the interactive desktop simulator on OS X.  
 
-1. Build the Xcode project located in `/tools/simulator`
+1. Build the Xcode project located in `/tools/osx`
 2. Connect your Launchpad Pro
 3. Install the factory firmware on your Launchpad Pro
 4. Debug away!
 
-Currently it only supports button presses and LED messages - there's no virtual MIDI output or aftertouch yet.  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic very nicely using Xcode!
+Currently it only supports button presses and LED messages - there's no virtual MIDI IO or aftertouch (yet).  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic using Xcode!
 
 You can also use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump - more of a test harness.
 
