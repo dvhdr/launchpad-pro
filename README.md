@@ -70,7 +70,7 @@ I won't describe how to use these tools, I'm sure you already know - and if you 
 Tip - set the delay between sysex messages to as low a value as possible, so you're not waiting about for ages while the firmware uploads!
 
 # Bricked it!
-Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (resources/Launchpad Pro-1.0.154.syx) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
+Don't worry - even if you upload toxic nonsense to the device, you cannot brick it - the bootloader is stored in a protected area of flash.  If your new firmware doesn't boot, you'll get stuck at step (3) above, or with a crashed unit. Simply repeat the above process with the shipping firmware image (`resources/Launchpad Pro-1.0.154.syx`) to restore your unit to the factory defaults.  Better yet, fix the bugs :)
 
 # The API
 The API works in two directions - from the HAL (hardware abstraction layer) to the app, and from the app to the HAL.  The HAL calls into your app to:
@@ -78,13 +78,14 @@ The API works in two directions - from the HAL (hardware abstraction layer) to t
 - Receive user events from the pads and buttons
 - Receive messages from the MIDI/USB ports
 - Receive a tick message to drive timer based code
+- Be notified when someone connects or disconnects a MIDI cable
 
-By calling into the HAL, your app can
+By calling into the HAL, your app can:
 
 - Write colours to the LEDs
 - Send messages to the MIDI/USB ports
 
-The best way to learn about these is to read the documentation in app.h, and to study the (very basic) example code!
+The best way to learn about these is to read the documentation in `app.h`, and to study the (very basic) example code!
 
 Currently the HAL/app interface does not support reading or writing the flash memory.
 
