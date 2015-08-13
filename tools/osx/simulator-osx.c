@@ -89,13 +89,28 @@ static void sim_app_timer_event()
 	app_timer_event();
 }
 
+//////////////////////////////////////////////////////////////////////////
+static void processPacket(const unsigned char *data, int length)
+{
+	while (length > 0)
+	{
+		printf("%2.2x ", *data++);
+		--length;
+	}
+	printf("\n");
+	
+	// recieve a pad or button press!
+}
+
+
 static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
 {
 	// farm out the packet list entries
 	const MIDIPacket *packet = &pktlist->packet[0];
 	for (int i=0; i <  pktlist->numPackets; ++i)
 	{
-		// process the packet
+		// process the packet - in our case, receive a surface message
+		processPacket(packet->data, packet->length);
 		
 		// next
 		packet = MIDIPacketNext(packet);
@@ -121,6 +136,12 @@ static int findLaunchapdPro()
 			{
 				// found it!  open the endpoint.
 				if (noErr != MIDIInputPortCreate(g_client, CFSTR("In"), readProc, NULL, &g_inDevPort))
+				{
+					return -1;
+				}
+				
+				
+				if (noErr != MIDIPortConnectSource(g_inDevPort, endpoint, NULL))
 				{
 					return -1;
 				}
@@ -152,7 +173,13 @@ static int findLaunchapdPro()
 		}
 	}
 	
-	return (g_inDevPort && g_outDevPort);
+	return !(g_inDevPort && g_outDevPort);
+}
+
+static int createVirtualPorts()
+{
+	// create local virtual Launchpad Pro ports
+	return 0;
 }
 
 // ____________________________________________________________________________
@@ -167,12 +194,20 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
+		// failed to open MIDI client
 		return -1;
 	}
 	
 	if (findLaunchapdPro())
 	{
+		// no Launchpad Pro connected
 		return -2;
+	}
+	
+	if (createVirtualPorts())
+	{
+		// unable to open virtual MIDI ports
+		return -3;
 	}
 	
 	// init the app
@@ -181,7 +216,11 @@ int main(int argc, char * argv[])
 	// start the terrible busywaiting timer loop
 	for (;;)
 	{
-		break;
+		usleep(1000);
+		app_timer_event();
+		
+		// tickle the runloop so we can recieve events
+		while (kCFRunLoopRunHandledSource == CFRunLoopRunInMode(kCFRunLoopCommonModes, 0, true));
 	}
 	
 	return 0;
