@@ -45,3 +45,5 @@ build
 *.xcscheme
 
 tools/osx/simulator.xcodeproj/xcuserdata/davehodder.xcuserdatad/xcschemes/xcschememanagement.plist
+
+*.xcbkptlist

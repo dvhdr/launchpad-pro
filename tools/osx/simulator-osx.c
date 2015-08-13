@@ -33,6 +33,15 @@
 #include <stdio.h>
 #include "app.h"
 
+#include <CoreMIDI/CoreMIDI.h>
+
+//////////////////////////////////////////////////////////////////////////
+static MIDIClientRef g_client = 0;
+static MIDIPortRef g_inDevPort = 0;
+static MIDIPortRef g_outDevPort = 0;
+static MIDIPortRef g_inVirtualPort = 0;
+static MIDIPortRef g_outVirtualPort = 0;
+
 // ____________________________________________________________________________
 //
 // Simulator "hal".  This lets you exercise your device code without having to upload
@@ -80,11 +89,91 @@ static void sim_app_timer_event()
 	app_timer_event();
 }
 
+static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
+{
+	// farm out the packet list entries
+	const MIDIPacket *packet = &pktlist->packet[0];
+	for (int i=0; i <  pktlist->numPackets; ++i)
+	{
+		// process the packet
+		
+		// next
+		packet = MIDIPacketNext(packet);
+	}
+}
+
+static int findLaunchapdPro()
+{
+	// find the input hardware port
+	for (ItemCount i=0; i < MIDIGetNumberOfSources(); ++i)
+	{
+		MIDIEndpointRef endpoint = MIDIGetSource(i);
+		if (endpoint)
+		{
+			// get the endpoint name (always available)
+			CFStringRef endpointName = NULL;
+			if (noErr != MIDIObjectGetStringProperty(endpoint, kMIDIPropertyName, &endpointName))
+			{
+				return -1;
+			}
+			
+			if (CFStringCompare(endpointName, CFSTR("Standalone Port"), kCFCompareCaseInsensitive) == 0)
+			{
+				// found it!  open the endpoint.
+				if (noErr != MIDIInputPortCreate(g_client, CFSTR("In"), readProc, NULL, &g_inDevPort))
+				{
+					return -1;
+				}
+			}
+		}
+	}
+	
+	// now find the output
+	for (ItemCount i=0; i < MIDIGetNumberOfDestinations(); ++i)
+	{
+		MIDIEndpointRef endpoint = MIDIGetDestination(i);
+		if (endpoint)
+		{
+			// get the endpoint name (always available)
+			CFStringRef endpointName = NULL;
+			if (noErr != MIDIObjectGetStringProperty(endpoint, kMIDIPropertyName, &endpointName))
+			{
+				return -1;
+			}
+			
+			if (CFStringCompare(endpointName, CFSTR("Standalone Port"), kCFCompareCaseInsensitive) == 0)
+			{
+				// found it!  open the endpoint.
+				if (noErr != MIDIOutputPortCreate(g_client, CFSTR("Out"), &g_outDevPort))
+				{
+					return -1;
+				}
+			}
+		}
+	}
+	
+	return (g_inDevPort && g_outDevPort);
+}
+
 // ____________________________________________________________________________
 
 int main(int argc, char * argv[])
 {
 	// open MIDI ports and wire them up
+	CFStringRef strName = CFStringCreateWithCString(NULL, "Launchpad Pro Simulator", kCFStringEncodingASCII);
+	if (noErr == MIDIClientCreate(strName, NULL, NULL, &g_client))
+	{
+		CFRelease(strName);
+	}
+	else
+	{
+		return -1;
+	}
+	
+	if (findLaunchapdPro())
+	{
+		return -2;
+	}
 	
 	// init the app
 	sim_app_init();
@@ -92,7 +181,7 @@ int main(int argc, char * argv[])
 	// start the terrible busywaiting timer loop
 	for (;;)
 	{
-		
+		break;
 	}
 	
 	return 0;
