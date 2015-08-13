@@ -39,8 +39,7 @@
 static MIDIClientRef g_client = 0;
 static MIDIPortRef g_inDevPort = 0;
 static MIDIPortRef g_outDevPort = 0;
-static MIDIPortRef g_inVirtualPort = 0;
-static MIDIPortRef g_outVirtualPort = 0;
+static MIDIEndpointRef g_outDevEndpoint = 0;
 
 // ____________________________________________________________________________
 //
@@ -50,12 +49,21 @@ static MIDIPortRef g_outVirtualPort = 0;
 
 void hal_plot_led(u8 type, u8 index, u8 red, u8 green, u8 blue)
 {
-	// wire this up to MIDI out...
+	// send this up the MIDI.  Construct sysex:
+	unsigned char data[] = {0xF0, 0x00, 0x20, 0x29, 0x02, 0x10, 0x0B, index, red, green, blue, 0xF7};
+	
+	static const int MAX_OUTPUT_BUFFER_SIZE = 256;
+	
+	MIDIPacketList packetLst;
+	MIDIPacket *packet = MIDIPacketListInit(&packetLst);
+	MIDIPacketListAdd(&packetLst, MAX_OUTPUT_BUFFER_SIZE, packet, 0, sizeof(data), data);
+	
+	MIDISend(g_outDevPort, g_outDevEndpoint, &packetLst);
 }
 
 void hal_send_midi(u8 port, u8 status, u8 d1, u8 d2)
 {
-	// send this up a virtual MIDI port?
+	// TODO: send this up a virtual MIDI port?
 }
 
 void hal_send_sysex(u8 port, const u8* data, u16 length)
@@ -63,49 +71,51 @@ void hal_send_sysex(u8 port, const u8* data, u16 length)
 	// as above, or just dump to console?
 }
 
-// ____________________________________________________________________________
-//
-// App event wrappers - these just log to the console.  Would be nice to wire
-// these up to a MIDI input from the real Launchpad Pro!
-// ____________________________________________________________________________
-
-static void sim_app_init()
-{
-	app_init();
-}
-
-static void sim_app_surface_event(u8 type, u8 index, u8 value)
-{
-	app_surface_event(type, index, value);
-}
-
-static void sim_app_midi_event(u8 port, u8 status, u8 d1, u8 d2)
-{
-	app_midi_event(port, status, d1, d2);
-}
-
-static void sim_app_timer_event()
-{
-	app_timer_event();
-}
-
 //////////////////////////////////////////////////////////////////////////
 static void processPacket(const unsigned char *data, int length)
 {
+	// parse MIDI (very naively)
+	unsigned char status = 0;
+	unsigned char d1 = 0xff;
+	
 	while (length > 0)
 	{
-		printf("%2.2x ", *data++);
+		if (*data & 0x80)
+		{
+			status  = *data;
+		}
+		else
+		{
+			// data
+			switch (status)
+			{
+				case 0x90: // pads
+				case 0xB0: // circular buttons
+				{
+					if (d1> 0x7F)
+					{
+						// await data 2 byte
+						d1 = *data;
+					}
+					else
+					{
+						// complete note message - send up to the app
+						app_surface_event(TYPEPAD, d1, *data);
+						d1 = 0xff;
+					}
+				}
+				break;
+			}
+		}
+		
+		++data;
 		--length;
 	}
-	printf("\n");
-	
-	// recieve a pad or button press!
 }
-
 
 static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
 {
-	// farm out the packet list entries
+	// farm out the packets
 	const MIDIPacket *packet = &pktlist->packet[0];
 	for (int i=0; i <  pktlist->numPackets; ++i)
 	{
@@ -117,7 +127,7 @@ static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *
 	}
 }
 
-static int findLaunchapdPro()
+static int findLaunchpadPro()
 {
 	// find the input hardware port
 	for (ItemCount i=0; i < MIDIGetNumberOfSources(); ++i)
@@ -169,17 +179,12 @@ static int findLaunchapdPro()
 				{
 					return -1;
 				}
+				g_outDevEndpoint = endpoint;
 			}
 		}
 	}
 	
 	return !(g_inDevPort && g_outDevPort);
-}
-
-static int createVirtualPorts()
-{
-	// create local virtual Launchpad Pro ports
-	return 0;
 }
 
 // ____________________________________________________________________________
@@ -198,28 +203,22 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 	
-	if (findLaunchapdPro())
+	if (findLaunchpadPro())
 	{
 		// no Launchpad Pro connected
 		return -2;
 	}
+
+	// now start things up
+	app_init();
 	
-	if (createVirtualPorts())
-	{
-		// unable to open virtual MIDI ports
-		return -3;
-	}
-	
-	// init the app
-	sim_app_init();
-	
-	// start the terrible busywaiting timer loop
+	// start a terrible busywaiting timer loop
 	for (;;)
 	{
 		usleep(1000);
 		app_timer_event();
 		
-		// tickle the runloop so we can recieve events
+		// run the runloop so we can receive MIDI events
 		while (kCFRunLoopRunHandledSource == CFRunLoopRunInMode(kCFRunLoopCommonModes, 0, true));
 	}
 	
