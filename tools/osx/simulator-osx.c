@@ -91,27 +91,34 @@ static void processPacket(const unsigned char *data, int length)
                 case NOTEON:
                 case NOTEOFF:
                     app_surface_event(TYPEPAD, data[1], data[2]);
+                    data += 3;
                     length -= 3;
                     break;
                     
                 case CC:
                     app_surface_event(TYPEPAD, data[1], data[2]);
+                    data += 3;
                     length -= 3;
                     break;
                     
                 case POLYAFTERTOUCH:
                     app_aftertouch_event(data[1], data[2]);
+                    data += 3;
                     length -= 3;
                     break;
                     
                 default:
+                	// Don't know this message, so bail
+                	length--;
+                	data++;
                     break;
             }
         }
         else
         {
             // We expected at least three bytes and didn't get them, so bail
-            length = 0;
+            length--;
+            data++;
         }
     }
 }
