@@ -76,43 +76,44 @@ void hal_send_sysex(u8 port, const u8* data, u16 length)
 //////////////////////////////////////////////////////////////////////////
 static void processPacket(const unsigned char *data, int length)
 {
-	// parse MIDI (very naively)
-	unsigned char status = 0;
-	unsigned char d1 = 0xff;
-	
-	while (length > 0)
-	{
-		if (*data & 0x80)
-		{
-			status  = *data;
-		}
-		else
-		{
-			// data
-			switch (status)
-			{
-				case 0x90: // pads
-				case 0xB0: // circular buttons
-				{
-					if (d1> 0x7F)
-					{
-						// await data 2 byte
-						d1 = *data;
-					}
-					else
-					{
-						// complete note message - send up to the app
-						app_surface_event(TYPEPAD, d1, *data);
-						d1 = 0xff;
-					}
-				}
-				break;
-			}
-		}
-		
-		++data;
-		--length;
-	}
+    // parse MIDI (very naively)
+    while (length > 0)
+    {
+        unsigned char status = data[0];
+        
+        // Wipe out channel (bottom four bits)
+        status &= 0xF0;
+        
+        if (length >= 3)
+        {
+            switch (status)
+            {
+                case NOTEON:
+                case NOTEOFF:
+                    app_surface_event(TYPEPAD, data[1], data[2]);
+                    length -= 3;
+                    break;
+                    
+                case CC:
+                    app_surface_event(TYPEPAD, data[1], data[2]);
+                    length -= 3;
+                    break;
+                    
+                case POLYAFTERTOUCH:
+                    app_aftertouch_event(data[1], data[2]);
+                    length -= 3;
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            // We expected at least three bytes and didn't get them, so bail
+            length = 0;
+        }
+    }
 }
 
 static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
