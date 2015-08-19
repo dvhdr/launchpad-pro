@@ -41,6 +41,8 @@ static MIDIPortRef g_inDevPort = 0;
 static MIDIPortRef g_outDevPort = 0;
 static MIDIEndpointRef g_outDevEndpoint = 0;
 
+static const float TIMER_INTERVAL_S = 0.001; //s
+
 // ____________________________________________________________________________
 //
 // Simulator "hal".  This lets you exercise your device code without having to upload
@@ -189,6 +191,14 @@ static int findLaunchpadPro()
 
 // ____________________________________________________________________________
 
+static void timerCallback(CFRunLoopTimerRef timer, void * info)
+{
+    app_timer_event();
+    CFRunLoopSourceSignal(info);
+}
+
+// ____________________________________________________________________________
+
 int main(int argc, char * argv[])
 {
 	// open MIDI ports and wire them up
@@ -212,15 +222,19 @@ int main(int argc, char * argv[])
 	// now start things up
 	app_init();
 	
-	// start a terrible busywaiting timer loop
-	for (;;)
-	{
-		usleep(1000);
-		app_timer_event();
-		
-		// run the runloop so we can receive MIDI events
-		while (kCFRunLoopRunHandledSource == CFRunLoopRunInMode(kCFRunLoopCommonModes, 0, true));
-	}
-	
-	return 0;
+    // start a timer loop
+    CFRunLoopSourceContext source_context;
+    bzero(&source_context, sizeof(source_context));
+    CFRunLoopSourceRef source = CFRunLoopSourceCreate(NULL, 0, & source_context);
+    CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopCommonModes);
+    
+    CFRunLoopTimerContext timer_context;
+    bzero(&timer_context, sizeof(timer_context));
+    timer_context.info = source;
+    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(), TIMER_INTERVAL_S, 0, 0, timerCallback, &timer_context);
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopCommonModes);
+    
+    CFRunLoopRun();
+    
+    return EXIT_SUCCESS;
 }
