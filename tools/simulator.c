@@ -57,6 +57,16 @@ void hal_send_sysex(u8 port, const u8* data, u16 length)
 	printf("...hal_send_midi(%d, (data), %d);\n", port, length);
 }
 
+void hal_read_flash(u32 offset, u8 *data, u32 length)
+{
+	printf("...hal_read_flash(%d, (data), %d);\n", offset, length);
+}
+
+void hal_write_flash(u32 offset,const u8 *data, u32 length)
+{
+	printf("...hal_write_flash(%d, (data), %d);\n", offset, length);
+}
+
 // ____________________________________________________________________________
 //
 // App event wrappers - these just log to the console.  Would be nice to wire

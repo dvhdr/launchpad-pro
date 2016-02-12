@@ -41,6 +41,15 @@
 //
 // This is where the fun is!  Add your code to the callbacks below to define how
 // your app behaves.
+//
+// In this example, we store all button states in an array, which we sometimes
+// save to flash.
+//______________________________________________________________________________
+
+#define BUTTON_COUNT 100
+
+u8 g_Buttons[BUTTON_COUNT] = {0};
+
 //______________________________________________________________________________
 
 void app_surface_event(u8 type, u8 index, u8 value)
@@ -49,16 +58,28 @@ void app_surface_event(u8 type, u8 index, u8 value)
 	{
 		case  TYPEPAD:
 		{
-			// example - light / extinguish pad LEDs, send MIDI
-			hal_plot_led(TYPEPAD, index, value, value, value);
+			// toggle it and store it off, so we can save to flash if we want to
+			if (value)
+			{
+				g_Buttons[index] = MAXLED * !g_Buttons[index];
+			}
+			
+			// example - light / extinguish pad LEDs
+			hal_plot_led(TYPEPAD, index, 0, 0, g_Buttons[index]);
+			
+			// example - send MIDI
 			hal_send_midi(DINMIDI, NOTEON | 0, index, value);
+			
 		}
 		break;
 
 		case TYPESETUP:
 		{
-			// example - light the setup LED
-			hal_plot_led(TYPESETUP, 0, value, value, value);
+			if (value)
+			{
+				// save button states to flash (reload them by power cycling the hardware!)
+				hal_write_flash(0, g_Buttons, BUTTON_COUNT);
+			}
 		}
 		break;
 	}
@@ -137,16 +158,17 @@ void app_timer_event()
 
 void app_init()
 {
+	// example - load button states from flash
+	hal_read_flash(0, g_Buttons, BUTTON_COUNT);
+	
     // example - light the LEDs to say hello!
 	for (int i=0; i < 10; ++i)
 	{
 		for (int j=0; j < 10; ++j)
 		{
-			u8 r = i < 5 ? (MAXLED * (5-i))/5 : 0;
-			u8 g = i < 5 ? (MAXLED * i)/5 : (MAXLED * (10-i))/5;
-			u8 b = i < 5 ? 0 : (MAXLED * (i-5))/5;
+			u8 b = g_Buttons[j*10 + i];
 
-			hal_plot_led(TYPEPAD, j*10 + i, r, b, g);
+			hal_plot_led(TYPEPAD, j*10 + i, 0, 0, b);
 		}
 	}
 }
