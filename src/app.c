@@ -51,7 +51,7 @@ void app_surface_event(u8 type, u8 index, u8 value)
 		{
 			// example - light / extinguish pad LEDs, send MIDI
 			hal_plot_led(TYPEPAD, index, value, value, value);
-			hal_send_midi(USBSTANDALONE, NOTEON | 0, index, value);
+			hal_send_midi(DINMIDI, NOTEON | 0, index, value);
 		}
 		break;
 
