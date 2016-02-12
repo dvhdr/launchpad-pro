@@ -35,11 +35,18 @@
 
 #include <CoreMIDI/CoreMIDI.h>
 
+#include <mach/mach_time.h>
+
 //////////////////////////////////////////////////////////////////////////
 static MIDIClientRef g_client = 0;
+
 static MIDIPortRef g_inDevPort = 0;
 static MIDIPortRef g_outDevPort = 0;
+
 static MIDIEndpointRef g_outDevEndpoint = 0;
+
+static MIDIEndpointRef g_outVirtualEndpoint = 0;
+static MIDIEndpointRef g_inVirtualEndpoint = 0;
 
 static const float TIMER_INTERVAL_S = 0.001; //s
 
@@ -65,7 +72,22 @@ void hal_plot_led(u8 type, u8 index, u8 red, u8 green, u8 blue)
 
 void hal_send_midi(u8 port, u8 status, u8 d1, u8 d2)
 {
-	// TODO: send this up a virtual MIDI port?
+	if (port == DINMIDI)
+	{
+		// send this up the virtual "DIN" MIDI
+		u8 data[] = {status, d1, d2};
+		
+		// MIDI needs host absolute time, NOT the proper time!
+		
+		uint64_t timeNow = mach_absolute_time();
+		
+		MIDIPacketList packetLst;
+		MIDIPacket *packet = MIDIPacketListInit(&packetLst);
+		MIDIPacketListAdd(&packetLst, 3, packet, timeNow, sizeof(data), data);
+		
+		OSStatus err = MIDIReceived(g_outVirtualEndpoint, &packetLst);
+		int n=0;
+	}
 }
 
 void hal_send_sysex(u8 port, const u8* data, u16 length)
@@ -123,6 +145,45 @@ static void processPacket(const unsigned char *data, int length)
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+static void processVirtualPortPacket(const unsigned char *data, int length)
+{
+	// parse MIDI (very naively)
+	while (length > 0)
+	{
+		unsigned char status = data[0];
+		
+		// Wipe out channel (bottom four bits)
+		status &= 0xF0;
+		
+		if (length >= 3)
+		{
+			switch (status)
+			{
+				case NOTEON:
+				case NOTEOFF:
+				case CC:
+					app_midi_event(DINMIDI, status, data[1], data[2]);
+					data += 3;
+					length -= 3;
+					break;
+					
+				default:
+					// Don't know this message, so bail
+					length--;
+					data++;
+					break;
+			}
+		}
+		else
+		{
+			// We expected at least three bytes and didn't get them, so bail
+			length--;
+			data++;
+		}
+	}
+}
+
 static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
 {
 	// farm out the packets
@@ -131,6 +192,20 @@ static void readProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *
 	{
 		// process the packet - in our case, receive a surface message
 		processPacket(packet->data, packet->length);
+		
+		// next
+		packet = MIDIPacketNext(packet);
+	}
+}
+
+static void virtualReadProc(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon)
+{
+	// farm out the packets
+	const MIDIPacket *packet = &pktlist->packet[0];
+	for (int i=0; i <  pktlist->numPackets; ++i)
+	{
+		// process the packet - in our case, receive a surface message
+		processVirtualPortPacket(packet->data, packet->length);
 		
 		// next
 		packet = MIDIPacketNext(packet);
@@ -197,6 +272,34 @@ static int findLaunchpadPro()
 	return !(g_inDevPort && g_outDevPort);
 }
 
+static int openVirtualPorts()
+{
+	// create the output port
+	CFStringRef name =  CFStringCreateWithCString(NULL, "LPP Simulator Out", kCFStringEncodingMacRoman);
+	OSStatus result = MIDISourceCreate(g_client, name, &g_outVirtualEndpoint);
+	CFRelease(name);
+	
+	if (noErr != result)
+	{
+		return -1;
+	}
+	
+	MIDIObjectSetIntegerProperty(g_outVirtualEndpoint,  kMIDIPropertyUniqueID, 12325436);
+	
+	// create the input port
+	name =  CFStringCreateWithCString(NULL, "LPP Simulator In", kCFStringEncodingMacRoman);
+	result = MIDIDestinationCreate(g_client, name, virtualReadProc, NULL, &g_inVirtualEndpoint);
+	CFRelease(name);
+	
+	if (noErr != result)
+	{
+		return -1;
+	}
+	MIDIObjectSetIntegerProperty(g_outVirtualEndpoint,  kMIDIPropertyUniqueID, 34534563);
+	
+	return 0;
+}
+
 // ____________________________________________________________________________
 
 static void timerCallback(CFRunLoopTimerRef timer, void * info)
@@ -225,6 +328,12 @@ int main(int argc, char * argv[])
 	{
 		// no Launchpad Pro connected
 		return -2;
+	}
+	
+	if (openVirtualPorts())
+	{
+		// no Launchpad Pro connected
+		return -3;
 	}
 
 	// now start things up
