@@ -7,8 +7,6 @@ Open source firmware for the Novation Launchpad Pro grid controller!  By customi
 
 You'll definitely need *some* C programming experience, but we've deliberately kept much of the firmwarey nastiness tucked away, to make the process a little friendlier.
 
-This project is still at an early stage, and no "interesting" example apps have yet been developed.  You might want to hang on until there's something more detailed before you get stuck in.  Or not!
-
 # Philosophy
 We could have released the full source for the factory shipping firmware, but we decided not to for a variety of reasons.  Instead, we created a simplified framework for developing "apps" on Launchpad Pro, which comprises a build environment, application entry points / API, and a library of low level source code.  Our reasoning is as follows:
 
@@ -84,17 +82,16 @@ By calling into the HAL, your app can:
 
 - Write colours to the LEDs
 - Send messages to the MIDI/USB ports
+- Store and recall a little bit of data on the Launchpad Pro's flash memory
 
 The best way to learn about these is to read the documentation in `app.h`, and to study the (very basic) example code!
-
-Currently the HAL/app interface does not support reading or writing the flash memory.
 
 # Debugging
 We decided not to support or encourage using a hardware debugger, as opening a Launchpad Pro to fit a debugging header can easily damage the FSR (force sensitive resistor) sheet.
 
 Instead, you're going to have to do things the old fashioned way - by blinking LEDs or sending MIDI messages (though hopefully no need for a 'scope!).  For what it's worth, that's the way I've developed this version of the firmware - dogfooding all the way ;)
 
-If do you want to debug interactively (and of course you do), you can use the interactive desktop simulator on OS X.  
+If do you want to debug interactively (and of course you do), you can use the interactive desktop simulator on OS X:  
 
 1. Build the Xcode project located in `/tools/osx`
 2. Connect your Launchpad Pro
@@ -102,7 +99,7 @@ If do you want to debug interactively (and of course you do), you can use the in
 4. Put the Launchpad Pro into "Programmer" mode using the Setup button (you'll get odd behaviour otherwise)
 5. Start debugging in Xcode!
 
-Currently it only supports button presses and LED messages - there's no virtual MIDI IO, setup button or aftertouch (yet).  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic using Xcode!
+Currently it only supports button presses and LED messages - there's no setup button, flash storage or aftertouch (yet).  It has a really awful busywaiting timer for the 1kHz tick.  However, it does allow you to debug your application logic using Xcode!
 
 You can also use the simple command-line simulator located in the `/tools` directory.  It is compiled and ran as part of the build process, so it serves as a very basic test of your app before it is baked into a sysex dump - more of a test harness.
 
@@ -117,7 +114,7 @@ To debug the simulator interactively in Eclipse:
 # The Hardware
 The Launchpad Pro is based around an ARM Cortex M3 from STMicroelectronics.  Specifically, an [STM32F103RBT6](http://www.st.com/web/catalog/mmc/FM141/SC1169/SS1031/LN1565/PF164487).  It's clocked at 72MHz, and has 20k RAM (I'm not sure how much of this we're using in the open build yet - should be a fair amount left but I haven't measured it).  The low level LED multiplexing and pad/switch scanning consume a fair bit of CPU time in interrupt mode, but have changed a little in the open firmware library (so again, I don't have measurements for how many cycles they're using).
 
-It has 128k of flash memory, but I'm pretty sure we won't be exposing all of it as part of this API (dangerously easy to corrupt things!).  Current thinking is to expose a few pages for use by apps, though this would still introduce risks (accidentally wearing out sectors, for example).  To be continued...
+It has 128k of flash memory, but we won't be exposing all of it as part of this API (dangerously easy to corrupt things!).
 
 # Vagrant tips
 When you're done developing, simply type `vagrant suspend` to halt your VM without destroying it - this will make `vagrant up` a lot quicker next time.  If you're really finished, `vagrant destroy` will completely remove the VM from your system (but not any of your code).
