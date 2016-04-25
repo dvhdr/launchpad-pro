@@ -20,8 +20,11 @@ We could have released the full source for the factory shipping firmware, but we
 
 I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging the process too](http://launchpadfirmware.tumblr.com/) if you'd like to read my musings.
 
-# Installation
-This project uses [Vagrant](https://www.vagrantup.com/) to manage the build environment. As such, you need to:
+# Setup the Development Environment
+
+## Using Vagrant
+
+To use [Vagrant](https://www.vagrantup.com/) to manage the build environment you need to:
 
 1. Clone this repository on your host computer (if using the command line, make sure you `git clone --recursive`).
 2. Install [Vagrant](https://www.vagrantup.com/)
@@ -31,21 +34,21 @@ This project uses [Vagrant](https://www.vagrantup.com/) to manage the build envi
 
 If you have a poor internet connection, ummm, find a better one :)
 
-# Building
+### Building
 Once your new "box" is up and running, you can build the app in one of two ways.  In the spirit of experimentation, we've created a full Eclipse development environment for you to use.  However, you might prefer to do things on the command line.
 
-#  To use the command line interface:
+###  To use the command line interface:
 1. SSH into the Vagrant "box" by doing `vagrant ssh`
 2. At the command prompt, simply type `make`
 
-#  To build using the Eclipse GUI
+### To build using Eclipse GUI
 
 **Make sure you wait until the `vagrant up` command has fully completed** before logging in to your VM.  The GUI appears long before the provisioning script finishes.  If you don't, you'll have to log out and log back in again before Eclipse can see the correct path.
 
 1. Log in to the Ubuntu GUI (the password is, as is the convention, **vagrant**).
 2. Launch Eclipse from the doodah on the top left (it's a bit like Spotlight)
 3. Accept the default when Eclipse asks you for a workspace.  I can't figure out how to store the workspace in source control, so you need to import it.
-4. Click "Workbench" at the Ecliplse startup screen.
+4. Click "Workbench" at the Eclipse startup screen.
 5. In Eclipse, choose "File->Import..."
 6. Under "C/C++", choose "Existing Code as Makefile Project", hit "Next"
 7. Give the project any name you like (launchpad?)
@@ -55,6 +58,16 @@ Once your new "box" is up and running, you can build the app in one of two ways.
 11. Click the hammer icon at the top, and wait while the project builds.
 
 Either of the above methods will generate the firmware image, `launchpad_pro.syx`, in the project `build` directory.  You can then upload this to your Launchpad Pro from the host!
+
+## Using OS X
+
+On OS X you can easily install the GCC ARM toolchain using the [homebrew package manager](http://brew.sh). The EABI tools are maintained in an external repository which you need to put on tap first. You can then run ```make``` to directly compile the code:
+
+```
+brew tap PX4/homebrew-px4
+brew install gcc-arm-none-eabi
+make
+```
 
 # Uploading to a Launchpad Pro
 Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on OS X, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
