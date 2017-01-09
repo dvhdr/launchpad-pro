@@ -47,8 +47,11 @@
 //______________________________________________________________________________
 
 #define BUTTON_COUNT 100
+#define PAD_COUNT 64
 
-u8 g_Buttons[BUTTON_COUNT] = {0};
+static u8 g_Buttons[BUTTON_COUNT] = {0};
+
+static const u16 *g_ADC = 0;
 
 //______________________________________________________________________________
 
@@ -58,17 +61,8 @@ void app_surface_event(u8 type, u8 index, u8 value)
 	{
 		case  TYPEPAD:
 		{
-			// toggle it and store it off, so we can save to flash if we want to
-			if (value)
-			{
-				g_Buttons[index] = MAXLED * !g_Buttons[index];
-			}
+			return;
 			
-			// example - light / extinguish pad LEDs
-			hal_plot_led(TYPEPAD, index, 0, 0, g_Buttons[index]);
-			
-			// example - send MIDI
-			hal_send_midi(DINMIDI, NOTEON | 0, index, value);
 			
 		}
 		break;
@@ -113,6 +107,8 @@ void app_sysex_event(u8 port, u8 * data, u16 count)
 
 void app_aftertouch_event(u8 index, u8 value)
 {
+	return;
+	
     // example - send poly aftertouch to MIDI ports
 	hal_send_midi(USBMIDI, POLYAFTERTOUCH | 0, index, value);
 
@@ -137,6 +133,18 @@ void app_cable_event(u8 type, u8 value)
 
 //______________________________________________________________________________
 
+static const u8 ADC_MAP[] =
+{
+	11, 51, 12, 52, 13, 53, 14, 54,
+	15, 55, 16, 56, 17 ,57, 18, 58,
+	21, 61, 22, 62, 23, 63, 24, 64,
+	25, 65, 26, 66, 27, 67, 28, 68,
+	31, 71, 32, 72, 33, 73, 34, 74,
+	35, 75, 36, 76, 37, 77, 38, 78,
+	41, 81, 42, 82, 43, 83, 44, 84,
+	45, 85, 46, 86, 47, 87, 48, 88,
+};
+
 
 void app_timer_event()
 {
@@ -150,25 +158,46 @@ void app_timer_event()
 		ms = 0;
 		
 		// send a clock pulse up the USB
-		hal_send_midi(USBSTANDALONE, MIDITIMINGCLOCK, 0, 0);
+		hal_send_midi(USBMIDI, MIDITIMINGCLOCK, 0, 0);
+	}
+	
+	// example: render raw ADC data as LEDs
+	for (int i=0; i < PAD_COUNT; ++i)
+	{
+		// raw adc values are 12 bit, but LEDs are 6 bit.
+		// so saturate into r;g;b for a rainbow effect to show pressure
+		u16 r =0;
+		u16 g =0;
+		u16 b =0;
+		
+		u16 x = g_ADC[i];
+		
+		x = (3 * MAXLED * x) >> 12;
+		
+		if (x < MAXLED)
+		{
+			r = x;
+		}
+		else if (x > MAXLED && x < (2*MAXLED))
+		{
+			r = MAXLED - x;
+			g = x - MAXLED;
+		}
+		else
+		{
+			g = MAXLED - x;
+			b = x - MAXLED;
+		}
+		
+		hal_plot_led(TYPEPAD, ADC_MAP[i], r, g, b);
 	}
 }
 
 //______________________________________________________________________________
 
-void app_init()
+void app_init(const u16 *adc_raw)
 {
-	// example - load button states from flash
-	hal_read_flash(0, g_Buttons, BUTTON_COUNT);
 	
-    // example - light the LEDs to say hello!
-	for (int i=0; i < 10; ++i)
-	{
-		for (int j=0; j < 10; ++j)
-		{
-			u8 b = g_Buttons[j*10 + i];
-
-			hal_plot_led(TYPEPAD, j*10 + i, 0, 0, b);
-		}
-	}
+	// example - store off the raw ADC frame pointer for later use
+	g_ADC = adc_raw;
 }

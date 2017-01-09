@@ -134,7 +134,7 @@ void hal_write_flash(u32 offset,const u8 *data, u32 length);
 /**
  * Called on startup, this is a good place to do any initialisation.
  */
-void app_init();
+void app_init(const u16 *adc_buffer);
 
 /**
  *  1kHz (1ms) timer.  You can set LEDs and send MIDI out from this function,
