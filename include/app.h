@@ -133,6 +133,11 @@ void hal_write_flash(u32 offset,const u8 *data, u32 length);
 
 /**
  * Called on startup, this is a good place to do any initialisation.
+ *
+ * @param adc_buffer -  this is a pointer to the raw ADC frame buffer. The
+ *						data is 12 bit unsigned. Note the indexing is strange - 
+ *						translate ADC indices to LED/button indices using the
+ *						ADC_MAP table declared in app_defs.h.
  */
 void app_init(const u16 *adc_buffer);
 

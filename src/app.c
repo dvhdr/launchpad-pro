@@ -45,8 +45,6 @@
 // In this example, we render the raw ADC data as LED rainbows.
 //______________________________________________________________________________
 
-#define PAD_COUNT 64
-
 static const u16 *g_ADC = 0;
 
 //______________________________________________________________________________
@@ -82,33 +80,18 @@ void app_cable_event(u8 type, u8 value)
 
 //______________________________________________________________________________
 
-static const u8 ADC_MAP[PAD_COUNT] =
-{
-	11, 51, 12, 52, 13, 53, 14, 54,
-	15, 55, 16, 56, 17 ,57, 18, 58,
-	21, 61, 22, 62, 23, 63, 24, 64,
-	25, 65, 26, 66, 27, 67, 28, 68,
-	31, 71, 32, 72, 33, 73, 34, 74,
-	35, 75, 36, 76, 37, 77, 38, 78,
-	41, 81, 42, 82, 43, 83, 44, 84,
-	45, 85, 46, 86, 47, 87, 48, 88,
-};
-
-
 void app_timer_event()
 {
-	// example: render raw ADC data as LEDs
+	// render raw ADC data as LEDs
 	for (int i=0; i < PAD_COUNT; ++i)
 	{
 		// raw adc values are 12 bit, but LEDs are 6 bit.
-		// so saturate into r;g;b for a rainbow effect to show pressure
-		u16 r =0;
-		u16 g =0;
-		u16 b =0;
+		// Let's saturate into r;g;b for a rainbow effect to show pressure
+		u16 r = 0;
+		u16 g = 0;
+		u16 b = 0;
 		
-		u16 x = g_ADC[i];
-		
-		x = (3 * MAXLED * x) >> 12;
+		u16 x = (3 * MAXLED * g_ADC[i]) >> 12;
 		
 		if (x < MAXLED)
 		{
@@ -134,6 +117,6 @@ void app_timer_event()
 void app_init(const u16 *adc_raw)
 {
 	
-	// example - store off the raw ADC frame pointer for later use
+	// store off the raw ADC frame pointer for later use
 	g_ADC = adc_raw;
 }
