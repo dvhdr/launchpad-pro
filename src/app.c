@@ -96,7 +96,7 @@ void app_timer_event()
 		{
 			r = x;
 		}
-		else if (x > MAXLED && x < (2*MAXLED))
+		else if (x >= MAXLED && x < (2*MAXLED))
 		{
 			r = MAXLED - x;
 			g = x - MAXLED;
