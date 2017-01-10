@@ -73,10 +73,12 @@ void hal_write_flash(u32 offset,const u8 *data, u32 length)
 // these up to a MIDI input from the real Launchpad Pro!
 // ____________________________________________________________________________
 
+static u16 raw_ADC[64];
+
 static void sim_app_init()
 {
 	printf("calling app_init()...\n");
-	app_init();
+	app_init(raw_ADC);
 }
 
 static void sim_app_surface_event(u8 type, u8 index, u8 value)
