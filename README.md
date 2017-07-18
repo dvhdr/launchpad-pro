@@ -22,6 +22,16 @@ I'm sure you'll have feedback for us, so please do get in touch!  I'm [blogging 
 
 # Setup the Development Environment
 
+## Using Docker
+
+If your system is running docker you can easily setup the environment with:
+
+```
+docker build -t novation-launchpad-pro-dev .
+docker run -it -v $(pwd):/launchpad-pro novation-launchpad-pro-dev
+make
+```
+
 ## Using Vagrant
 
 To use [Vagrant](https://www.vagrantup.com/) to manage the build environment you need to:
