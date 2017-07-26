@@ -7,7 +7,7 @@ language: C
 
 before_install:
 - docker build -t novation-launchpad-pro-dev .
-- docker run -it -v $(pwd):/launchpad-pro novation-launchpad-pro-dev
+- docker run -d -v $(pwd):/launchpad-pro novation-launchpad-pro-dev
 
 script:
 - make
