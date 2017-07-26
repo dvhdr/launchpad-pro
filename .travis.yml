@@ -1,0 +1,13 @@
+sudo: required
+
+services:
+- docker
+
+language: C
+
+before_install:
+- docker build -t novation-launchpad-pro-dev .
+- docker run -v $(pwd):/launchpad-pro novation-launchpad-pro-dev "make"
+
+script:
+- test -f build/launchpad_pro.syx
