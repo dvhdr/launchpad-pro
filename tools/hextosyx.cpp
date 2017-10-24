@@ -105,12 +105,12 @@ static void write_header(intelhex::hex_data& data, std::ofstream& ofs, size_t Ba
 	ofs.put(ID >> 8);
 	ofs.put(ID & 0x7f);
 	
-	ofs.put(data[BaseAddress + 0x132] >> 4);
-	ofs.put(data[BaseAddress + 0x132] & 0x0f);
-	ofs.put(data[BaseAddress + 0x131] >> 4);
-	ofs.put(data[BaseAddress + 0x131] & 0x0f);
-	ofs.put(data[BaseAddress + 0x130] >> 4);
-	ofs.put(data[BaseAddress + 0x130] & 0x0f);
+	ofs.put(data[BaseAddress + 0x102] >> 4);
+	ofs.put(data[BaseAddress + 0x102] & 0x0f);
+	ofs.put(data[BaseAddress + 0x101] >> 4);
+	ofs.put(data[BaseAddress + 0x101] & 0x0f);
+	ofs.put(data[BaseAddress + 0x100] >> 4);
+	ofs.put(data[BaseAddress + 0x100] & 0x0f);
 	
 	ofs.put(0xf7);
 }
