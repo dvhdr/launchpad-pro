@@ -41,51 +41,57 @@
 //
 // This is where the fun is!  Add your code to the callbacks below to define how
 // your app behaves.
+//
+// In this example, we render the raw ADC data as LED rainbows.
+//______________________________________________________________________________
+
+static const u16 *g_ADC = 0;
+
 //______________________________________________________________________________
 
 void app_surface_event(u8 type, u8 index, u8 value)
 {
-	switch (type)
-	{
-		case  TYPEPAD:
-		{
-			// example - light / extinguish pad LEDs, send MIDI
-			hal_plot_led(TYPEPAD, index, value, value, value);
-			hal_send_midi(DINMIDI, NOTEON | 0, index, value);
-		}
-		break;
-
-		case TYPESETUP:
-		{
-			// example - light the setup LED
-			hal_plot_led(TYPESETUP, 0, value, value, value);
-		}
-		break;
-	}
+    switch (type)
+    {
+        case  TYPEPAD:
+        {
+            // example - light / extinguish pad LEDs, send MIDI
+            hal_plot_led(TYPEPAD, index, value, value, value);
+            hal_send_midi(DINMIDI, NOTEON | 0, index, value);
+        }
+            break;
+            
+        case TYPESETUP:
+        {
+            // example - light the setup LED
+            hal_plot_led(TYPESETUP, 0, value, value, value);
+        }
+            break;
+    }
 }
 
 //______________________________________________________________________________
 
 void app_midi_event(u8 port, u8 status, u8 d1, u8 d2)
 {
-	// example - MIDI interface functionality for USB "MIDI" port -> DIN port
-	if (port == USBMIDI)
-	{
-		hal_send_midi(DINMIDI, status, d1, d2);
-	}
-
-	// // example -MIDI interface functionality for DIN -> USB "MIDI" port port
-	if (port == DINMIDI)
-	{
-		hal_send_midi(USBMIDI, status, d1, d2);
-	}
+    // example - MIDI interface functionality for USB "MIDI" port -> DIN port
+    if (port == USBMIDI)
+    {
+        hal_send_midi(DINMIDI, status, d1, d2);
+    }
+    
+    // // example -MIDI interface functionality for DIN -> USB "MIDI" port port
+    if (port == DINMIDI)
+    {
+        hal_send_midi(USBMIDI, status, d1, d2);
+    }
 }
 
 //______________________________________________________________________________
 
 void app_sysex_event(u8 port, u8 * data, u16 count)
 {
-	// example - respond to UDI messages?
+    // example - respond to UDI messages?
 }
 
 //______________________________________________________________________________
@@ -93,60 +99,81 @@ void app_sysex_event(u8 port, u8 * data, u16 count)
 void app_aftertouch_event(u8 index, u8 value)
 {
     // example - send poly aftertouch to MIDI ports
-	hal_send_midi(USBMIDI, POLYAFTERTOUCH | 0, index, value);
-
+    hal_send_midi(USBMIDI, POLYAFTERTOUCH | 0, index, value);
+    
     // example - set LED to white, brightness in proportion to pressure
-	hal_plot_led(TYPEPAD, index, value/2, value/2, value/2);
+    hal_plot_led(TYPEPAD, index, value/2, value/2, value/2);
 }
-	
+
 //______________________________________________________________________________
 
 void app_cable_event(u8 type, u8 value)
 {
     // example - light the Setup LED to indicate cable connections
-	if (type == MIDI_IN_CABLE)
-	{
-		hal_plot_led(TYPESETUP, 0, 0, value, 0); // green
-	}
-	else if (type == MIDI_OUT_CABLE)
-	{
-		hal_plot_led(TYPESETUP, 0, value, 0, 0); // red
-	}
+    if (type == MIDI_IN_CABLE)
+    {
+        hal_plot_led(TYPESETUP, 0, 0, value, 0); // green
+    }
+    else if (type == MIDI_OUT_CABLE)
+    {
+        hal_plot_led(TYPESETUP, 0, value, 0, 0); // red
+    }
 }
 
 //______________________________________________________________________________
-
 
 void app_timer_event()
 {
-	// example - send MIDI clock at 125bpm
+    // example - send MIDI clock at 125bpm
 #define TICK_MS 20
-	
-	static u8 ms = TICK_MS;
-	
-	if (++ms >= TICK_MS)
+    
+    static u8 ms = TICK_MS;
+    
+    if (++ms >= TICK_MS)
+    {
+        ms = 0;
+        
+        // send a clock pulse up the USB
+        hal_send_midi(USBSTANDALONE, MIDITIMINGCLOCK, 0, 0);
+    }
+    
+/*
+	// alternative example - show raw ADC data as LEDs
+	for (int i=0; i < PAD_COUNT; ++i)
 	{
-		ms = 0;
+		// raw adc values are 12 bit, but LEDs are 6 bit.
+		// Let's saturate into r;g;b for a rainbow effect to show pressure
+		u16 r = 0;
+		u16 g = 0;
+		u16 b = 0;
 		
-		// send a clock pulse up the USB
-		hal_send_midi(USBSTANDALONE, MIDITIMINGCLOCK, 0, 0);
+		u16 x = (3 * MAXLED * g_ADC[i]) >> 12;
+		
+		if (x < MAXLED)
+		{
+			r = x;
+		}
+		else if (x >= MAXLED && x < (2*MAXLED))
+		{
+			r = MAXLED - x;
+			g = x - MAXLED;
+		}
+		else
+		{
+			g = MAXLED - x;
+			b = x - MAXLED;
+		}
+		
+		hal_plot_led(TYPEPAD, ADC_MAP[i], r, g, b);
 	}
+ */
 }
 
 //______________________________________________________________________________
 
-void app_init()
+void app_init(const u16 *adc_raw)
 {
-    // example - light the LEDs to say hello!
-	for (int i=0; i < 10; ++i)
-	{
-		for (int j=0; j < 10; ++j)
-		{
-			u8 r = i < 5 ? (MAXLED * (5-i))/5 : 0;
-			u8 g = i < 5 ? (MAXLED * i)/5 : (MAXLED * (10-i))/5;
-			u8 b = i < 5 ? 0 : (MAXLED * (i-5))/5;
-
-			hal_plot_led(TYPEPAD, j*10 + i, r, b, g);
-		}
-	}
+	
+	// store off the raw ADC frame pointer for later use
+	g_ADC = adc_raw;
 }

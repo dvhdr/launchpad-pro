@@ -43,7 +43,7 @@
 
 /******************************************************************************
  Button indexing is as follows - numbers in brackets do not correspond to real
-buttons, but can be harmessly sent in hal_set_led.
+ buttons, but can be harmessly sent in hal_set_led.
  
  (90)91 92 93 94 95 96 97 98 (99)
  .......
@@ -92,6 +92,40 @@ void hal_send_midi(u8 port, u8 status, u8 data1, u8 data2);
  */
 void hal_send_sysex(u8 port, const u8* data, u16 length);
 
+/**
+ * Read some data from flash.
+ *
+ * Flash storage is in a single block, currently corresponding to one page.
+ * The block is always USER_AREA_SIZE bytes long. You can read/write any bytes
+ * within it - you do not need to worry about paging, that's handled by the HAL.
+ *
+ * The block size may increase to span multiple pages in future :)
+ *
+ * @param offset - how far into the USER_AREA_SIZE byte block to start reading
+ * @param data - buffer to receive data (must be at least length bytes long)
+ * @param length - bytes to read
+ *
+ * Attempts to read beyond the end of the block will fail silently.
+ *
+ * Note that your first ever read from a new device will contain 0xFF's until
+ * you overwrite them.
+ */
+void hal_read_flash(u32 offset, u8 *data, u32 length);
+
+/**
+ * Write data to flash
+ *
+ * Do take care to avoid thrashing it, as you can wear it out with excessive
+ * writes. The HAL does not currently do anything clever to mitigate this.
+ *
+ * @param offset - how far into the USER_AREA_SIZE byte block to start writing
+ * @param data - buffer to write (must be at least length bytes long)
+ * @param length - bytes to write
+ *
+ * Attempts to write beyond the end of the block will fail silently
+ */
+void hal_write_flash(u32 offset,const u8 *data, u32 length);
+
 // ____________________________________________________________________________
 //
 // Callbacks from the hardware (implemented in your app.c)
@@ -99,8 +133,13 @@ void hal_send_sysex(u8 port, const u8* data, u16 length);
 
 /**
  * Called on startup, this is a good place to do any initialisation.
+ *
+ * @param adc_buffer -  this is a pointer to the raw ADC frame buffer. The
+ *						data is 12 bit unsigned. Note the indexing is strange - 
+ *						translate ADC indices to LED/button indices using the
+ *						ADC_MAP table declared in app_defs.h.
  */
-void app_init();
+void app_init(const u16 *adc_buffer);
 
 /**
  *  1kHz (1ms) timer.  You can set LEDs and send MIDI out from this function,
