@@ -42,10 +42,17 @@
 // This is where the fun is!  Add your code to the callbacks below to define how
 // your app behaves.
 //
-// In this example, we render the raw ADC data as LED rainbows.
+// In this example, we either render the raw ADC data as LED rainbows or store
+// and recall the pad state from flash.
 //______________________________________________________________________________
 
+// store ADC frame pointer
 static const u16 *g_ADC = 0;
+
+// buffer to store pad states for flash save
+#define BUTTON_COUNT 100
+
+u8 g_Buttons[BUTTON_COUNT] = {0};
 
 //______________________________________________________________________________
 
@@ -55,18 +62,30 @@ void app_surface_event(u8 type, u8 index, u8 value)
     {
         case  TYPEPAD:
         {
-            // example - light / extinguish pad LEDs, send MIDI
-            hal_plot_led(TYPEPAD, index, value, value, value);
+            // toggle it and store it off, so we can save to flash if we want to
+            if (value)
+            {
+                g_Buttons[index] = MAXLED * !g_Buttons[index];
+            }
+            
+            // example - light / extinguish pad LEDs
+            hal_plot_led(TYPEPAD, index, 0, 0, g_Buttons[index]);
+            
+            // example - send MIDI
             hal_send_midi(DINMIDI, NOTEON | 0, index, value);
+            
         }
-            break;
+        break;
             
         case TYPESETUP:
         {
-            // example - light the setup LED
-            hal_plot_led(TYPESETUP, 0, value, value, value);
+            if (value)
+            {
+                // save button states to flash (reload them by power cycling the hardware!)
+                hal_write_flash(0, g_Buttons, BUTTON_COUNT);
+            }
         }
-            break;
+        break;
     }
 }
 
@@ -101,8 +120,7 @@ void app_aftertouch_event(u8 index, u8 value)
     // example - send poly aftertouch to MIDI ports
     hal_send_midi(USBMIDI, POLYAFTERTOUCH | 0, index, value);
     
-    // example - set LED to white, brightness in proportion to pressure
-    hal_plot_led(TYPEPAD, index, value/2, value/2, value/2);
+    
 }
 
 //______________________________________________________________________________
@@ -173,6 +191,19 @@ void app_timer_event()
 
 void app_init(const u16 *adc_raw)
 {
+    // example - load button states from flash
+    hal_read_flash(0, g_Buttons, BUTTON_COUNT);
+    
+    // example - light the LEDs to say hello!
+    for (int i=0; i < 10; ++i)
+    {
+        for (int j=0; j < 10; ++j)
+        {
+            u8 b = g_Buttons[j*10 + i];
+            
+            hal_plot_led(TYPEPAD, j*10 + i, 0, 0, b);
+        }
+    }
 	
 	// store off the raw ADC frame pointer for later use
 	g_ADC = adc_raw;
