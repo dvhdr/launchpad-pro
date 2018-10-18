@@ -1,5 +1,5 @@
 # phusion
-FROM phusion/baseimage:0.9.22
+FROM phusion/baseimage:0.11
 
 # Use baseimage-docker's init system.
 CMD ["/sbin/my_init"]
