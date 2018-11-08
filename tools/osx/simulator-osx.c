@@ -50,6 +50,10 @@ static MIDIEndpointRef g_inVirtualEndpoint = 0;
 
 static const float TIMER_INTERVAL_S = 0.001; //s
 
+static const u16 g_ADC[PAD_COUNT];
+
+static u8 g_Flash[USER_AREA_SIZE];
+
 // ____________________________________________________________________________
 //
 // Simulator "hal".  This lets you exercise your device code without having to upload
@@ -93,6 +97,15 @@ void hal_send_midi(u8 port, u8 status, u8 d1, u8 d2)
 void hal_send_sysex(u8 port, const u8* data, u16 length)
 {
 	// as above, or just dump to console?
+}
+
+void hal_read_flash(u32 offset, u8 *data, u32 length)
+{
+    memcpy(data, g_Flash+offset, length);
+}
+void hal_write_flash(u32 offset,const u8 *data, u32 length)
+{
+    memcpy(g_Flash+offset, data, length);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -335,9 +348,13 @@ int main(int argc, char * argv[])
 		// no Launchpad Pro connected
 		return -3;
 	}
+    
+    // clear dummy flash & ADC
+    memset(g_Flash, 0, USER_AREA_SIZE);
+    memset(g_ADC, 0, sizeof(g_ADC));
 
 	// now start things up
-	app_init();
+	app_init(g_ADC);
 	
     // start a timer loop
     CFRunLoopSourceContext source_context;
