@@ -71,6 +71,19 @@
 void hal_plot_led(u8 type, u8 index, u8 red, u8 green, u8 blue);
 
 /**
+ * Read the RGB value of an LED.  This function is safe to call from any
+ * of the app functions below, at any time. Result is undefined if an invalid address is passed
+ * for any of the red, green or blue components.
+ *
+ * @param type - TYPEPAD to address any pad or button, TYPESETUP to address the Setup LED
+ * @param index - The index of the button, as above
+ * @param red - address to read red colour value, in [0, MAXLED].
+ * @param green - address to read green colour value, in [0, MAXLED]
+ * @param blue - address to read blue colour value, in [0, MAXLED]
+ */
+void hal_read_led(u8 type, u8 index, u8 *red, u8 *green, u8 *blue);
+
+/**
  * Send a MIDI message to either USB port or to the DIN output.
  * 
  * @param port - which port to send the message to - can be USBSTANDALONE, USBMIDI or DINMIDI.

@@ -41,8 +41,11 @@
 
 void hal_plot_led(u8 type, u8 index, u8 red, u8 green, u8 blue)
 {
-	// wire this up to MIDI out...
-	printf("...hal_plot_led(%d, %d, %d, %d, %d);\n", type, index, red, green, blue);
+    // wire this up to MIDI out...?
+}
+
+void hal_read_led(u8 type, u8 index, u8 *red, u8 *green, u8 *blue)
+{
 }
 
 void hal_send_midi(u8 port, u8 status, u8 d1, u8 d2)
