@@ -140,7 +140,7 @@ void hal_read_flash(u32 offset, u8 *data, u32 length);
 void hal_write_flash(u32 offset,const u8 *data, u32 length);
 
 /**
- * Retrieve the device ID
+ * Retrieve the device ID bootloader option
  *
  * Users can set a unique ID from 1-16 in the bootloader. This is useful
  * for USB apps, as it helps multi-Launchpad setups behave predictably.
@@ -148,6 +148,16 @@ void hal_write_flash(u32 offset,const u8 *data, u32 length);
  * @result the zero-based device ID [0-15] assigned to this Launchpad Pro.
  */
 u8 hal_read_device_id();
+
+/**
+ * Retrieve the "layout text" bootloader option
+ *
+ * This setting determines whether the factory firmware will scroll text on changing
+ * layouts. This may be useful as a preference for open firmware apps as well.
+ *
+ * @result 1 to scroll text on layout changes, 0 not to.
+ */
+u8 hal_read_layout_text();
 
 // ____________________________________________________________________________
 //
