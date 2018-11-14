@@ -139,6 +139,16 @@ void hal_read_flash(u32 offset, u8 *data, u32 length);
  */
 void hal_write_flash(u32 offset,const u8 *data, u32 length);
 
+/**
+ * Retrieve the device ID
+ *
+ * Users can set a unique ID from 1-16 in the bootloader. This is useful
+ * for USB apps, as it helps multi-Launchpad setups behave predictably.
+ *
+ * @result the zero-based device ID [0-15] assigned to this Launchpad Pro.
+ */
+u8 hal_read_device_id();
+
 // ____________________________________________________________________________
 //
 // Callbacks from the hardware (implemented in your app.c)
