@@ -155,7 +155,6 @@ void app_timer_event()
         hal_send_midi(USBSTANDALONE, MIDITIMINGCLOCK, 0, 0);
     }
     
-/*
 	// alternative example - show raw ADC data as LEDs
 	for (int i=0; i < PAD_COUNT; ++i)
 	{
@@ -173,18 +172,17 @@ void app_timer_event()
 		}
 		else if (x >= MAXLED && x < (2*MAXLED))
 		{
-			r = MAXLED - x;
+			r = 2*MAXLED - x;
 			g = x - MAXLED;
 		}
 		else
 		{
-			g = MAXLED - x;
-			b = x - MAXLED;
+			g = 3*MAXLED - x;
+			b = x - 2*MAXLED;
 		}
 		
 		hal_plot_led(TYPEPAD, ADC_MAP[i], r, g, b);
 	}
- */
 }
 
 //______________________________________________________________________________
