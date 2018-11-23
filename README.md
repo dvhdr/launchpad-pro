@@ -148,8 +148,6 @@ If you only want to build using the command line, you might want to run your Vag
 
 If prefer, you can install the gcc-arm toolchain on your local machine, or you might already have it.  You can find all you need [here](http://gnuarmeclipse.livius.net/).
 
-It appears that VirtualBox does not yet work on Windows 10.
-
 If your connection drops out while updating the Vagrant box, you can get stuck, unable to `vagrant up`.  To resolve, you need to delete the temp file - `~/vagrant.d/tmp`.
 
 # Firmware development tips
