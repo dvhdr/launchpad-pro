@@ -7,6 +7,7 @@ struct Track
     // Gates
     u32 euclidSequenceFlags;
     u8 euclidSequenceLength;
+    u8 euclidSequencePosition;
 
     u8 euclidDensity;
     u8 euclidOffset;
@@ -14,6 +15,7 @@ struct Track
     // Notes
     u32 turingMachineSequenceArray[SEQUENCE_MAX_LENGTH];
     u8 turingMachineSequenceLength;
+    u8 turingMachineSequencePosition;
 
     u8 turingMachineScale;
     u8 turingMachineRandom;

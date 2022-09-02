@@ -1,6 +1,7 @@
 #include "sequencer.h"
 #include "channel.h"
 #include "app_defs.h"
+#include "utils.h"
 
 struct Track tracks[NUM_TRACKS];
 
@@ -56,24 +57,44 @@ void incrementSequencerTrack(u8 trackNumber)
 
 u8 nextGate(u8 trackNumber)
 {
+    if (tracks[trackNumber].euclidSequencePosition >= tracks[trackNumber].euclidSequenceLength)
+    {
+        tracks[trackNumber].euclidSequencePosition = 0;
+    }
 
+    return isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition);
 }
 
 u8 nextNote(u8 trackNumber)
 {
-    
+    if (tracks[trackNumber].turingMachineSequencePosition >= tracks[trackNumber].turingMachineSequenceLength)
+    {
+        tracks[trackNumber].turingMachineSequencePosition = 0;
+    }
+
+    return getQuantizedNote(trackNumber, tracks[trackNumber].turingMachineSequenceArray[tracks[trackNumber].turingMachineSequencePosition]);
+}
+
+u8 getQuantizedNote(u8 trackNumber, u8 note)
+{
+    return 64;
 }
 
 void playNote(u8 trackNumber, u8 note)
 {
-    // kill previous note
-    hal_send_midi(DINMIDI, NOTEOFF, tracks[trackNumber].previousNote, 0);
+    for (u8 channel = 0; channel < 8; channel++)
+    {
+        if(!isFlagOn8(tracks[trackNumber].midiChannelsFlags, channel)) { continue; }
 
-    // play new note
-    hal_send_midi(DINMIDI, NOTEON, note, 127);
+        // kill previous note
+        hal_send_midi(DINMIDI, NOTEOFF | channel, tracks[trackNumber].previousNote, 0);
 
-    // store off note for next time
-    tracks[trackNumber].previousNote = note;
+        // play new note
+        hal_send_midi(DINMIDI, NOTEON | channel, note, 127);
+
+        // store off note for next time
+        tracks[trackNumber].previousNote = note;
+    }
 }
 
 void updateUi()

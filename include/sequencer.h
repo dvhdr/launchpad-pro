@@ -22,6 +22,8 @@ u8 nextGate(u8 trackNumber);
 
 u8 nextNote(u8 trackNumber);
 
+u8 getQuantizedNote(u8 trackNumber, u8 note);
+
 void playNote(u8 trackNumber, u8 note);
 
 void updateUi();
