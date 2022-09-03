@@ -1,3 +1,6 @@
+#ifndef SEQUENCER_H
+#define SEQUENCER_H
+
 #include "app.h"
 
 #define MS_PER_MIN 60000
@@ -27,3 +30,5 @@ u8 getQuantizedNote(u8 trackNumber, u8 note);
 void playNote(u8 trackNumber, u8 note);
 
 void updateUi();
+
+#endif

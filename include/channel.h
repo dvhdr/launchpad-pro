@@ -1,3 +1,6 @@
+#ifndef CHANNEL_H
+#define CHANNEL_H
+
 #include "app.h"
 
 #define SEQUENCE_MAX_LENGTH 32
@@ -38,3 +41,5 @@ struct Track
 
     u16 uiQuantizer;
 };
+
+#endif
