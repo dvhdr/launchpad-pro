@@ -66,13 +66,11 @@ void incrementSequencerTrack(u8 trackNumber)
     if (gate)
     {
         u8 note = 0;
-        u8 isNewNoteBool = 0;
         if (tracks[trackNumber].quantizedNotesArray != 0)
         { 
             note = nextNote(trackNumber);
-            isNewNoteBool = 1;
         }
-        playNote(trackNumber, note, isNewNoteBool);
+        playNote(trackNumber, note);
     }
 }
 
@@ -101,6 +99,12 @@ u8 getQuantizedNote(u8 trackNumber, u8 note)
 {
     u8 truncatedNote = note & tracks[trackNumber].turingMachineScale;
 
+    if (tracks[trackNumber].quantizedNotesArray == 0)
+    {
+        // return -1 to signify there is no note to play
+        return -1;
+    }
+
     for (u8 bitPos = truncatedNote; bitPos < NOTES_MAX_RANGE; bitPos++)
     {
         if (isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
@@ -112,7 +116,7 @@ u8 getQuantizedNote(u8 trackNumber, u8 note)
     return 0;
 }
 
-void playNote(u8 trackNumber, u8 note, u8 isNewNoteBool)
+void playNote(u8 trackNumber, u8 note)
 {
     for (u8 channel = 0; channel < 8; channel++)
     {
@@ -121,11 +125,13 @@ void playNote(u8 trackNumber, u8 note, u8 isNewNoteBool)
         // kill previous note
         hal_send_midi(DINMIDI, NOTEOFF | channel, tracks[trackNumber].previousNote, 0);
 
-        if (!isNewNoteBool) { continue; }
+        // if note is -1, there is no note to play
+        if (note < 0) { continue; }
+
         // play new note
         hal_send_midi(DINMIDI, NOTEON | channel, note, 127);
 
-        // store off note for next time
+        // store off triggered note for next time
         tracks[trackNumber].previousNote = note;
     }
 }
