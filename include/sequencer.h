@@ -3,9 +3,14 @@
 
 #include "app.h"
 
+// Sequencer
 #define MS_PER_MIN 60000
 #define CLOCK_RATE 4 // 4 == 16th notes, 8 == 32nd notes
 #define NUM_TRACKS 8
+
+// UI
+#define TRACK_VIEW 0
+#define CHANNEL_VIEW 1
 
 static u8 tempo = 100;
 

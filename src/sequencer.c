@@ -6,6 +6,7 @@
 struct Track tracks[NUM_TRACKS];
 
 static u8 currentTrack = 0;
+static u8 currentPage = TRACK_VIEW;
 
 void initialize()
 {
@@ -35,7 +36,17 @@ void handlePadEvent(u8 type, u8 index, u8 value)
         {
             if (value)
             {
+                switch (currentPage)
+                {
+                    case TRACK_VIEW:
+                    {
 
+                    }
+                    case CHANNEL_VIEW:
+                    {
+                        
+                    }
+                }
             }
         }
     }
@@ -138,6 +149,14 @@ void playNote(u8 trackNumber, u8 note)
 
 void updateUi()
 {
-    
+    // TODO
+    // draw mute channels
+    // draw currentTrack euclid parameters
+    // draw currentTrack turing machine parameters
+    // draw currentTrack quantizer settings
+    // draw track selection buttons
+
+    // STRETCH
+    // render gates along the bottom pads to provide some visual feedback
 }
 
