@@ -9,7 +9,22 @@ static u8 currentTrack = 0;
 
 void initialize()
 {
+    for (u8 i = 0; i < NUM_TRACKS; i++)
+    {
+        // gates
+        tracks[i].euclidSequenceLength = 8;
 
+        // notes
+        tracks[i].turingMachineSequenceLength = 8;
+
+        // misc
+        tracks[i].midiChannelsFlags = i;
+        tracks[i].octave = 1;
+
+        // UI
+        tracks[i].uiEuclidSequenceLength = 8;
+        tracks[i].uiTuringMachineSequenceLength = 8;
+    }
 }
 
 void handlePadEvent(u8 type, u8 index, u8 value)
@@ -50,8 +65,14 @@ void incrementSequencerTrack(u8 trackNumber)
 
     if (gate)
     {
-        u8 note = nextNote(trackNumber);
-        playNote(trackNumber, note);
+        u8 note = 0;
+        u8 isNewNoteBool = 0;
+        if (tracks[trackNumber].quantizedNotesArray != 0)
+        { 
+            note = nextNote(trackNumber);
+            isNewNoteBool = 1;
+        }
+        playNote(trackNumber, note, isNewNoteBool);
     }
 }
 
@@ -72,15 +93,26 @@ u8 nextNote(u8 trackNumber)
         tracks[trackNumber].turingMachineSequencePosition = 0;
     }
 
-    return getQuantizedNote(trackNumber, tracks[trackNumber].turingMachineSequenceArray[tracks[trackNumber].turingMachineSequencePosition]);
+    u8 note = tracks[trackNumber].turingMachineSequenceShiftRegister << tracks[trackNumber].turingMachineSequencePosition;
+    return getQuantizedNote(trackNumber, note);
 }
 
 u8 getQuantizedNote(u8 trackNumber, u8 note)
 {
-    return 64;
+    u8 truncatedNote = note & tracks[trackNumber].turingMachineScale;
+
+    for (u8 bitPos = truncatedNote; bitPos < NOTES_MAX_RANGE; bitPos++)
+    {
+        if (isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
+        {
+            return bitPos + (tracks[trackNumber].octave * 12);
+        }
+    }
+
+    return 0;
 }
 
-void playNote(u8 trackNumber, u8 note)
+void playNote(u8 trackNumber, u8 note, u8 isNewNoteBool)
 {
     for (u8 channel = 0; channel < 8; channel++)
     {
@@ -89,6 +121,7 @@ void playNote(u8 trackNumber, u8 note)
         // kill previous note
         hal_send_midi(DINMIDI, NOTEOFF | channel, tracks[trackNumber].previousNote, 0);
 
+        if (!isNewNoteBool) { continue; }
         // play new note
         hal_send_midi(DINMIDI, NOTEON | channel, note, 127);
 

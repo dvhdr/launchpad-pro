@@ -4,8 +4,9 @@
 #include "app.h"
 
 #define SEQUENCE_MAX_LENGTH 32
+#define NOTES_MAX_RANGE 32
 
-struct Track
+typedef struct Track
 {
     // Gates
     u32 euclidSequenceFlags;
@@ -16,7 +17,7 @@ struct Track
     u8 euclidOffset;
 
     // Notes
-    u32 turingMachineSequenceArray[SEQUENCE_MAX_LENGTH];
+    u32 turingMachineSequenceShiftRegister;
     u8 turingMachineSequenceLength;
     u8 turingMachineSequencePosition;
 
@@ -29,6 +30,7 @@ struct Track
 
     // Misc
     u8 midiChannelsFlags;
+    u8 octave;
 
     // UI
     u8 uiEuclidSequenceLength;
@@ -40,6 +42,6 @@ struct Track
     u8 uiTuringMachineSequenceRandom;
 
     u16 uiQuantizer;
-};
+} Track;
 
 #endif
