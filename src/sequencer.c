@@ -187,6 +187,14 @@ u8 getQuantizedNote(u8 trackNumber, u8 note)
         }
     }
 
+    for (u8 bitPos = truncatedNote; bitPos > 0; bitPos--)
+    {
+        if (isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
+        {
+            return bitPos + (tracks[trackNumber].octave * 12);
+        }
+    }
+
     return 0;
 }
 
