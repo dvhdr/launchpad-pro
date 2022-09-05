@@ -46,4 +46,8 @@ void updateUi();
 
 void renderMuteButtons();
 
+void renderQuantizer();
+
+void renderTrackSelectButtons();
+
 #endif

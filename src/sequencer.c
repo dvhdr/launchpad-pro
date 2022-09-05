@@ -224,8 +224,8 @@ void updateUi()
     renderMuteButtons();
     // draw currentTrack euclid parameters
     // draw currentTrack turing machine parameters
-    // draw currentTrack quantizer settings
-    // draw track selection buttons
+    renderQuantizer();
+    renderTrackSelectButtons();
 
     // STRETCH
     // render gates along the bottom pads to provide some visual feedback
@@ -260,6 +260,14 @@ void renderQuantizer()
         {
             hal_plot_led(TYPEPAD, quantizerUiKeyToPadLookupTable[i], 64, 64, 64);
         }
+    }
+}
+
+void renderTrackSelectButtons()
+{
+    for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
+    {
+        hal_plot_led(TYPEPAD, 80 - (trackNumber * 10), tracks[currentTrack].red, tracks[currentTrack].green, tracks[currentTrack].blue);
     }
 }
 
