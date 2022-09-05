@@ -18,6 +18,14 @@ void initialize();
 
 void handlePadEvent(u8 type, u8 index, u8 value);
 
+void setMuteValue(u8 track);
+
+void setQuantizerBlackKeysValue(u8 note);
+
+void setQuantizerWhiteKeysValue(u8 note);
+
+void updateQuantizedNotesArray();
+
 u8 getTempo();
 
 u8 getMsPerClock();
@@ -35,5 +43,7 @@ u8 getQuantizedNote(u8 trackNumber, u8 note);
 void playNote(u8 trackNumber, u8 note);
 
 void updateUi();
+
+void renderMuteButtons();
 
 #endif

@@ -25,12 +25,14 @@ typedef struct Track
     u8 turingMachineRandom;
 
     u8 previousNote;
+    u16 quantizerValues;
 
     u32 quantizedNotesArray;
 
     // Misc
     u8 midiChannelsFlags;
     u8 octave;
+    u8 isMuted;
 
     // UI
     u8 uiEuclidSequenceLength;
@@ -42,6 +44,10 @@ typedef struct Track
     u8 uiTuringMachineSequenceRandom;
 
     u16 uiQuantizer;
+
+    u8 red;
+    u8 green;
+    u8 blue;
 } Track;
 
 #endif

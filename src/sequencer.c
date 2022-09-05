@@ -25,6 +25,10 @@ void initialize()
         // UI
         tracks[i].uiEuclidSequenceLength = 8;
         tracks[i].uiTuringMachineSequenceLength = 8;
+
+        tracks[i].red = 7 * i;
+        tracks[i].green = MAXLED / i;
+        tracks[i].blue = MAXLED % (i + 1);
     }
 }
 
@@ -40,14 +44,72 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                 {
                     case TRACK_VIEW:
                     {
+                        // if Mute buttons
+                        if ((index - 9) % 10 == 0)
+                        {
+                            setMuteValue(((index - 9) / 10) - 1);
+                        }
 
+                        // if White keys quantizer pad
+                        if (index > 11 && index <= 18)
+                        {
+                            setQuantizerWhiteKeysValue(index);
+                        }
+
+                        // if Black keys quantizer pad
+                        if (index > 21 && index <= 28)
+                        {
+                            setQuantizerBlackKeysValue(index);
+                        }
                     }
                     case CHANNEL_VIEW:
                     {
-                        
+
                     }
                 }
             }
+        }
+    }
+}
+
+void setMuteValue(u8 track)
+{
+    tracks[track].isMuted ^= 1;
+}
+
+void setQuantizerBlackKeysValue(u8 note)
+{
+    u8 bitPosition = quantizerBlackKeysLookupTable[note - 21];
+
+    if (!bitPosition) return;
+
+    u16 bitMask = 1 << bitPosition;
+    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues | bitMask;
+    updateQuantizedNotesArray();
+}
+
+void setQuantizerWhiteKeysValue(u8 note)
+{
+    u16 bitMask = 1 << quantizerWhiteKeysLookupTable[note - 11];
+    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues | bitMask;
+    updateQuantizedNotesArray();
+}
+
+void updateQuantizedNotesArray()
+{
+    for (u8 quantizerIndex = 0; quantizerIndex < 12; quantizerIndex++)
+    {
+        tracks[currentTrack].quantizedNotesArray = 0;
+
+        u8 noteOn = isFlagOn16(tracks[currentTrack].quantizerValues, quantizerIndex);
+
+        if (!noteOn) { continue; }
+
+        u8 bitPos = quantizerIndex;
+        while (bitPos < 32)
+        {
+            tracks[currentTrack].quantizedNotesArray = tracks[currentTrack].quantizedNotesArray | (1 << bitPos);
+            bitPos += 12;
         }
     }
 }
@@ -66,6 +128,7 @@ void handleNextPulse()
 {
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
+        if (tracks[trackNumber].isMuted) {continue;}
         incrementSequencerTrack(trackNumber);
     }
 }
@@ -150,7 +213,7 @@ void playNote(u8 trackNumber, u8 note)
 void updateUi()
 {
     // TODO
-    // draw mute channels
+    renderMuteButtons();
     // draw currentTrack euclid parameters
     // draw currentTrack turing machine parameters
     // draw currentTrack quantizer settings
@@ -158,5 +221,37 @@ void updateUi()
 
     // STRETCH
     // render gates along the bottom pads to provide some visual feedback
+}
+
+void renderMuteButtons()
+{
+    for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
+    {
+        u8 padNumber = 19 + (trackNumber * 10);
+        if (tracks[trackNumber].isMuted)
+        {
+            hal_plot_led(TYPEPAD, padNumber, MAXLED, 0, 0);
+        }
+        else
+        {
+            hal_plot_led(TYPEPAD, padNumber, 16, 16, 16);
+        }
+    }
+}
+
+void renderQuantizer()
+{
+    for (u8 i = 0; i < 12; i++)
+    {
+        u8 isNoteOn = isFlagOn16(tracks[currentTrack].quantizerValues, i);
+        if (isNoteOn)
+        {
+            hal_plot_led(TYPEPAD, quantizerUiKeyToPadLookupTable[i], tracks[currentTrack].red, tracks[currentTrack].green, tracks[currentTrack].blue);
+        }
+        else
+        {
+            hal_plot_led(TYPEPAD, quantizerUiKeyToPadLookupTable[i], 64, 64, 64);
+        }
+    }
 }
 
