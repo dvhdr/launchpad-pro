@@ -2,6 +2,7 @@
 #include "channel.h"
 #include "app_defs.h"
 #include "utils.h"
+#include <stdlib.h>
 
 struct Track tracks[NUM_TRACKS];
 
@@ -28,7 +29,7 @@ void initialize()
 
         tracks[i].red = 7 * i;
         tracks[i].green = MAXLED / i;
-        tracks[i].blue = MAXLED % (i + 1);
+        tracks[i].blue = (i + 1) % MAXLED;
     }
 }
 
@@ -51,15 +52,22 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         }
 
                         // if White keys quantizer pad
-                        if (index > 11 && index <= 18)
+                        if (index >= 11 && index <= 18)
                         {
-                            setQuantizerWhiteKeysValue(index);
+                            toggleQuantizerWhiteKeysValue(index);
                         }
 
                         // if Black keys quantizer pad
-                        if (index > 21 && index <= 28)
+                        if (index >= 21 && index <= 28)
                         {
-                            setQuantizerBlackKeysValue(index);
+                            toggleQuantizerBlackKeysValue(index);
+                        }
+
+                        // if Track select
+                        if (index % 10 == 0)
+                        {
+                            u8 subtractor = index * 0.1;
+                            selectTrack(8 - subtractor);
                         }
                     }
                     case CHANNEL_VIEW:
@@ -77,21 +85,26 @@ void setMuteValue(u8 track)
     tracks[track].isMuted ^= 1;
 }
 
-void setQuantizerBlackKeysValue(u8 note)
+void selectTrack(u8 track)
+{
+    currentTrack = track;
+}
+
+void toggleQuantizerBlackKeysValue(u8 note)
 {
     u8 bitPosition = quantizerBlackKeysLookupTable[note - 21];
 
     if (!bitPosition) return;
 
     u16 bitMask = 1 << bitPosition;
-    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues | bitMask;
+    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues ^ bitMask;
     updateQuantizedNotesArray();
 }
 
-void setQuantizerWhiteKeysValue(u8 note)
+void toggleQuantizerWhiteKeysValue(u8 note)
 {
     u16 bitMask = 1 << quantizerWhiteKeysLookupTable[note - 11];
-    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues | bitMask;
+    tracks[currentTrack].quantizerValues = tracks[currentTrack].quantizerValues ^ bitMask;
     updateQuantizedNotesArray();
 }
 
@@ -160,6 +173,8 @@ u8 nextGate(u8 trackNumber)
 
 u8 nextNote(u8 trackNumber)
 {
+    insertRandom(trackNumber);
+    
     if (tracks[trackNumber].turingMachineSequencePosition >= tracks[trackNumber].turingMachineSequenceLength)
     {
         tracks[trackNumber].turingMachineSequencePosition = 0;
@@ -167,6 +182,16 @@ u8 nextNote(u8 trackNumber)
 
     u8 note = tracks[trackNumber].turingMachineSequenceShiftRegister << tracks[trackNumber].turingMachineSequencePosition;
     return getQuantizedNote(trackNumber, note);
+}
+
+void insertRandom(u8 trackNumber)
+{
+    u8 random = rand() % 32;
+    if (random < tracks[trackNumber].turingMachineRandom)
+    {
+        u32 bitMask = 1 << tracks[trackNumber].turingMachineSequencePosition;
+        tracks[trackNumber].turingMachineSequenceShiftRegister = tracks[trackNumber].turingMachineSequenceShiftRegister ^ bitMask;
+    }
 }
 
 u8 getQuantizedNote(u8 trackNumber, u8 note)
@@ -258,7 +283,7 @@ void renderQuantizer()
         }
         else
         {
-            hal_plot_led(TYPEPAD, quantizerUiKeyToPadLookupTable[i], 64, 64, 64);
+            hal_plot_led(TYPEPAD, quantizerUiKeyToPadLookupTable[i], MAXLED, MAXLED, MAXLED);
         }
     }
 }

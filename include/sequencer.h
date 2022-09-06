@@ -20,9 +20,11 @@ void handlePadEvent(u8 type, u8 index, u8 value);
 
 void setMuteValue(u8 track);
 
-void setQuantizerBlackKeysValue(u8 note);
+void selectTrack(u8 track);
 
-void setQuantizerWhiteKeysValue(u8 note);
+void toggleQuantizerBlackKeysValue(u8 note);
+
+void toggleQuantizerWhiteKeysValue(u8 note);
 
 void updateQuantizedNotesArray();
 
@@ -37,6 +39,8 @@ void incrementSequencerTrack(u8 trackNumber);
 u8 nextGate(u8 trackNumber);
 
 u8 nextNote(u8 trackNumber);
+
+void insertRandom(u8 trackNumber);
 
 u8 getQuantizedNote(u8 trackNumber, u8 note);
 
