@@ -28,6 +28,8 @@ void toggleQuantizerWhiteKeysValue(u8 note);
 
 void updateQuantizedNotesArray();
 
+void calculateEuclideanRhythm();
+
 u8 getTempo();
 
 u8 getMsPerClock();

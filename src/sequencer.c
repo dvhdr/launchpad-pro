@@ -127,6 +127,28 @@ void updateQuantizedNotesArray()
     }
 }
 
+void calculateEuclideanRhythm()
+{
+    tracks[currentTrack].euclidSequenceFlags = 0;
+
+    if (tracks[currentTrack].euclidDensity == 0) { return; }
+    
+    if (tracks[currentTrack].euclidDensity >= tracks[currentTrack].euclidSequenceLength)
+    {
+        tracks[currentTrack].euclidSequenceFlags = 0b11111111111111111111111111111111;
+        return;
+    }
+
+    u8 position = 0;
+    u8 stride = tracks[currentTrack].euclidSequenceLength - tracks[currentTrack].euclidDensity;
+    for (u8 i = 0; i < tracks[currentTrack].euclidDensity; i++)
+    {
+        position = (position + stride + tracks[currentTrack].euclidOffset) % tracks[currentTrack].euclidSequenceLength;
+        u8 bitMask = 1 << position;
+        tracks[currentTrack].euclidSequenceFlags = tracks[currentTrack].euclidSequenceFlags | bitMask;
+    }
+}
+
 u8 getTempo()
 {
     return tempo;
@@ -168,13 +190,13 @@ u8 nextGate(u8 trackNumber)
         tracks[trackNumber].euclidSequencePosition = 0;
     }
 
-    return isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition);
+    return isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition + tracks[trackNumber].euclidOffset);
 }
 
 u8 nextNote(u8 trackNumber)
 {
     insertRandom(trackNumber);
-    
+
     if (tracks[trackNumber].turingMachineSequencePosition >= tracks[trackNumber].turingMachineSequenceLength)
     {
         tracks[trackNumber].turingMachineSequencePosition = 0;
