@@ -7,20 +7,49 @@
 #define MS_PER_MIN 60000
 #define CLOCK_RATE 4 // 4 == 16th notes, 8 == 32nd notes
 #define NUM_TRACKS 8
+#define EXTERNAL_CLOCK 0
+#define INTERNAL_CLOCK 1
+#define DEFAULT_OCTAVE 3
 
 // UI
 #define TRACK_VIEW 0
 #define CHANNEL_VIEW 1
-
-static u8 tempo = 100;
+#define RESOLUTION_VIEW 2
+#define GATES_VIEW_FOR_FUN 3
 
 void initialize();
 
+u8 getSyncMode();
+
+void toggleSyncMode();
+
 void handlePadEvent(u8 type, u8 index, u8 value);
+
+void setTempoIncrease();
+
+void setTempoDecrease();
+
+void setOctaveDown();
+
+void setOctaveUp();
 
 void setMuteValue(u8 track);
 
 void selectTrack(u8 track);
+
+void setEuclidPatternLength(u8 bitNumber);
+
+void setEuclidDensity(u8 bitNumber);
+
+void setEuclidOffset(u8 bitNumber);
+
+void setTuringMachinePatternLength(u8 bitNumber);
+
+void setTuringMachineScale(u8 bitNumber);
+
+void setTuringMachineRandom(u8 bitNumber);
+
+void setChannel(u8 index);
 
 void toggleQuantizerBlackKeysValue(u8 note);
 
@@ -48,6 +77,10 @@ u8 getQuantizedNote(u8 trackNumber, u8 note);
 
 void playNote(u8 trackNumber, u8 note);
 
+void killNote(u8 trackNumber, u8 note);
+
+void killNotes(u8 trackNumber);
+
 void updateUi();
 
 void renderMuteButtons();
@@ -55,5 +88,23 @@ void renderMuteButtons();
 void renderQuantizer();
 
 void renderTrackSelectButtons();
+
+void renderEuclidPatternLength();
+
+void renderEuclidDensity();
+
+void renderEuclidOffset();
+
+void renderTuringMachinePatternLength();
+
+void renderTuringMachineScale();
+
+void renderTuringMachineRandom();
+
+void renderTempoButtons();
+
+void renderOctaveButtons();
+
+void renderChannels();
 
 #endif

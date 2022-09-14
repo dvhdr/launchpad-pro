@@ -33,4 +33,24 @@ u8 isFlagOn8(u8 flags, u8 bit)
     return ((flags & (1 << bit)) != 0);
 }
 
+u8 Pow(u8 base, u8 exponent)
+{
+	u32 result = 1;
+	for(;;)
+	{
+		if (exponent & 1)
+		{
+			result *= base;
+		}
+		exponent >>= 1;
+		if(!exponent)
+		{
+			break;
+		}
+		base *= base;
+	}
+
+	return result;
+}
+
 #endif
