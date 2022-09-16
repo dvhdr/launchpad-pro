@@ -60,21 +60,22 @@ void app_midi_event(u8 port, u8 status, u8 d1, u8 d2)
     {
         if (getSyncMode() == EXTERNAL_CLOCK)
         {
+            hal_plot_led(TYPESETUP, 0, 0, MAXLED, 0);
             handleNextPulse();
         }
     }
 
     // example - MIDI interface functionality for USB "MIDI" port -> DIN port
-    if (port == USBMIDI)
-    {
-        hal_send_midi(DINMIDI, status, d1, d2);
-    }
+    // if (port == USBMIDI)
+    // {
+    //     hal_send_midi(DINMIDI, status, d1, d2);
+    // }
     
-    // // example -MIDI interface functionality for DIN -> USB "MIDI" port port
-    if (port == DINMIDI)
-    {
-        hal_send_midi(USBMIDI, status, d1, d2);
-    }
+    // // // example -MIDI interface functionality for DIN -> USB "MIDI" port port
+    // if (port == DINMIDI)
+    // {
+    //     hal_send_midi(USBMIDI, status, d1, d2);
+    // }
 }
 
 //______________________________________________________________________________
@@ -96,15 +97,15 @@ void app_aftertouch_event(u8 index, u8 value)
 
 void app_cable_event(u8 type, u8 value)
 {
-    // example - light the Setup LED to indicate cable connections
-    if (type == MIDI_IN_CABLE)
-    {
-        hal_plot_led(TYPESETUP, 0, 0, value, 0); // green
-    }
-    else if (type == MIDI_OUT_CABLE)
-    {
-        hal_plot_led(TYPESETUP, 0, value, 0, 0); // red
-    }
+    // // example - light the Setup LED to indicate cable connections
+    // if (type == MIDI_IN_CABLE)
+    // {
+    //     hal_plot_led(TYPESETUP, 0, 0, value, 0); // green
+    // }
+    // else if (type == MIDI_OUT_CABLE)
+    // {
+    //     hal_plot_led(TYPESETUP, 0, value, 0, 0); // red
+    // }
 }
 
 //______________________________________________________________________________
@@ -119,8 +120,10 @@ void app_timer_event()
         
         if (getSyncMode() == INTERNAL_CLOCK)
         {
+            hal_plot_led(TYPESETUP, 0, MAXLED, 0, 0);
             handleNextPulse();
         }
+
         updateUi();
     }
 }

@@ -33,6 +33,7 @@ typedef struct Track
     u8 midiChannelsFlags;
     u8 octave;
     u8 isMuted;
+    u8 resolution;
 
     // UI
     u8 uiEuclidSequenceLength;

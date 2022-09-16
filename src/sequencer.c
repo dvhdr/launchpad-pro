@@ -8,11 +8,14 @@ struct Track tracks[NUM_TRACKS];
 
 static u8 currentTrack = 0;
 static u8 currentPage = TRACK_VIEW;
-static u8 tempo = 100;
+static u8 tempo = 115;
+static u8 msPerClock = 0;
 static u8 syncMode = INTERNAL_CLOCK;
 
 void initialize()
 {
+    setMsPerClock();
+
     for (u8 i = 0; i < NUM_TRACKS; i++)
     {
         // gates
@@ -26,6 +29,7 @@ void initialize()
         // misc
         tracks[i].midiChannelsFlags = Pow(2, i);
         tracks[i].octave = DEFAULT_OCTAVE;
+        tracks[i].resolution = 5;
 
         // UI
         tracks[i].uiEuclidSequenceLength = 8;
@@ -47,6 +51,12 @@ void toggleSyncMode()
     syncMode ^= 1;
 }
 
+void setCurrentView(u8 view)
+{
+    currentPage = view;
+    clearAllPads();
+}
+
 void handlePadEvent(u8 type, u8 index, u8 value)
 {
     switch (type)
@@ -61,30 +71,35 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                 if (index == 91)
                 {
                     setTempoIncrease();
+                    break;
                 }
 
                 // if tempo decrease
                 if (index == 92)
                 {
                     setTempoDecrease();
+                    break;
                 }
 
                 // if octave down
                 if (index == 93)
                 {
                     setOctaveDown();
+                    break;
                 }
 
                 // if octave up
                 if (index == 94)
                 {
                     setOctaveUp();
+                    break;
                 }
 
                 // if Mute buttons
                 if ((index - 9) % 10 == 0)
                 {
                     setMuteValue(((index - 9) / 10) - 1);
+                    break;
                 }
                         
                 // if Track select
@@ -92,6 +107,21 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                 {
                     u8 subtractor = index * 0.1;
                     selectTrack(8 - subtractor);
+                    break;
+                }
+
+                // if Track view select
+                if (index == 95)
+                {
+                    setCurrentView(TRACK_VIEW);
+                    break;
+                }
+
+                // if Channel view select
+                if (index == 96)
+                {
+                    setCurrentView(CHANNEL_VIEW);
+                    break;
                 }
 
                 switch (currentPage)
@@ -102,12 +132,14 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         if (index >= 11 && index <= 18)
                         {
                             toggleQuantizerWhiteKeysValue(index);
+                            break;
                         }
 
                         // if Black keys quantizer pad
                         if (index >= 21 && index <= 28)
                         {
                             toggleQuantizerBlackKeysValue(index);
+                            break;
                         }
 
                         // if euclid pattern length
@@ -115,6 +147,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 83);
                             setEuclidPatternLength(bitNumber);
+                            break;
                         }
 
                         // if euclid density
@@ -122,6 +155,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 73);
                             setEuclidDensity(bitNumber);
+                            break;
                         }
 
                         // if euclid offset
@@ -129,6 +163,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 63);
                             setEuclidOffset(bitNumber);
+                            break;
                         }
 
                         // if turing machine pattern length
@@ -136,6 +171,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 53);
                             setTuringMachinePatternLength(bitNumber);
+                            break;
                         }
 
                         // if turing machine pattern scale
@@ -143,6 +179,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 43);
                             setTuringMachineScale(bitNumber);
+                            break;
                         }
 
                         // if turing machine pattern random
@@ -150,8 +187,12 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         {
                             u8 bitNumber = 5 - (index - 33);
                             setTuringMachineRandom(bitNumber);
+                            break;
                         }
+
+                        break;
                     }
+
                     case CHANNEL_VIEW:
                     {
                         u8 unitValue = index % 10;
@@ -159,6 +200,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                         if (index >= 11 && index <= 88 && unitValue >= 1 && unitValue <= 8)
                         {
                             setChannel(index);
+                            break;
                         }
                     }
                     case RESOLUTION_VIEW:
@@ -172,21 +214,31 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                 }
             }
         }
+        break;
+
         case TYPESETUP:
         {
-            toggleSyncMode();
+            if (value)
+            {
+                toggleSyncMode();
+                break;
+            }
         }
+
+        break;
     }
 }
 
 void setTempoIncrease()
 {
     tempo++;
+    setMsPerClock();
 }
 
 void setTempoDecrease()
 {
     tempo--;
+    setMsPerClock();
 }
 
 void setOctaveDown()
@@ -257,9 +309,9 @@ void setTuringMachineRandom(u8 bitNumber)
 
 void setChannel(u8 index)
 {
-    u8 track = index / 10;
-    u8 channel = 8 - (index % 10);
-    tracks[track].midiChannelsFlags ^= (1 << channel);
+    u8 track = 8 - (index / 10);
+    u8 channel = index % 10;
+    tracks[track].midiChannelsFlags ^= (1 << (channel - 1));
 }
 
 void toggleQuantizerBlackKeysValue(u8 note)
@@ -327,18 +379,35 @@ u8 getTempo()
     return tempo;
 }
 
+void setMsPerClock()
+{
+    msPerClock = MS_PER_MIN / (CLOCK_RATE * tempo);
+}
+
 u8 getMsPerClock()
 {
-    return MS_PER_MIN / (CLOCK_RATE * tempo);
+    return msPerClock;
 }
 
 void handleNextPulse()
 {
+    static u8 resolutionCounter = 0;
+
+    if (resolutionCounter >= 6)
+    {
+        resolutionCounter = 0;
+    }
+
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        if (tracks[trackNumber].isMuted) {continue;}
-        incrementSequencerTrack(trackNumber);
+        if (tracks[trackNumber].isMuted) { continue; }
+        if (resolutionCounter == tracks[trackNumber].resolution)
+        {
+            incrementSequencerTrack(trackNumber);
+        }
     }
+
+    resolutionCounter++;
 }
 
 void incrementSequencerTrack(u8 trackNumber)
@@ -359,7 +428,7 @@ u8 nextGate(u8 trackNumber)
 {
     tracks[trackNumber].euclidSequencePosition++;
 
-    if (tracks[trackNumber].euclidSequencePosition > tracks[trackNumber].euclidSequenceLength)
+    if (tracks[trackNumber].euclidSequencePosition >= tracks[trackNumber].euclidSequenceLength)
     {
         tracks[trackNumber].euclidSequencePosition = 0;
     }
@@ -373,7 +442,7 @@ u8 nextNote(u8 trackNumber)
 
     tracks[trackNumber].turingMachineSequencePosition++;
 
-    if (tracks[trackNumber].turingMachineSequencePosition > tracks[trackNumber].turingMachineSequenceLength)
+    if (tracks[trackNumber].turingMachineSequencePosition >= tracks[trackNumber].turingMachineSequenceLength)
     {
         tracks[trackNumber].turingMachineSequencePosition = 0;
     }
@@ -400,19 +469,20 @@ u8 getQuantizedNote(u8 trackNumber, u8 note)
         return -1;
     }
 
-    u8 truncatedNote = note % tracks[trackNumber].turingMachineScale;
+    u8 truncatedNote = note % (tracks[trackNumber].turingMachineScale + 1);
 
-    for (u8 bitPos = truncatedNote; bitPos < NOTES_MAX_RANGE; bitPos++)
+    for (u8 i = 0; i < NOTES_MAX_RANGE; i++)
     {
+        s8 bitPos = truncatedNote + i;
+        // Forwards scanning
         if (isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
         {
             return bitPos + (tracks[trackNumber].octave * 12);
         }
-    }
 
-    for (u8 bitPos = truncatedNote; bitPos > 0; bitPos--)
-    {
-        if (isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
+        // Backwards scanning
+        bitPos = truncatedNote - 1;
+        if (bitPos && isFlagOn32(tracks[trackNumber].quantizedNotesArray, bitPos))
         {
             return bitPos + (tracks[trackNumber].octave * 12);
         }
@@ -465,6 +535,7 @@ void updateUi()
     renderTrackSelectButtons();
     renderTempoButtons();
     renderOctaveButtons();
+    renderViewButtons();
 
     if (currentPage == TRACK_VIEW)
     {
@@ -646,14 +717,40 @@ void renderChannels()
         {
             u8 isChannelOn = isFlagOn8(tracks[trackNumber].midiChannelsFlags, channelNumber);
 
-            u8 padNumber = ((8 - trackNumber) * 10) + (8 - channelNumber);
+            u8 padNumber = ((8 - trackNumber) * 10) + (1 + channelNumber);
 
             if (isChannelOn)
             {
                 hal_plot_led(TYPEPAD, padNumber, tracks[trackNumber].red, tracks[trackNumber].green, tracks[trackNumber].blue);
             }
-
-            hal_plot_led(TYPEPAD, padNumber, MAXLED, MAXLED, MAXLED);
+            else
+            {
+                hal_plot_led(TYPEPAD, padNumber, MAXLED, MAXLED, MAXLED);
+            }
         }
+    }
+}
+
+void renderViewButtons()
+{
+    for (u8 view = 0; view < 4; view++)
+    {
+        if (view == currentPage)
+        {
+            hal_plot_led(TYPEPAD, 95 + view, MAXLED, MAXLED, MAXLED);
+        }
+        else
+        {
+            hal_plot_led(TYPEPAD, 95 + view, 16, 16, 16);
+        }
+
+    }
+}
+
+void clearAllPads()
+{
+    for (u8 i = 1; i < 99; i ++)
+    {
+        hal_plot_led(TYPEPAD, i, 0, 0, 0);
     }
 }

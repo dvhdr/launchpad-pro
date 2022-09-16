@@ -5,7 +5,7 @@
 
 // Sequencer
 #define MS_PER_MIN 60000
-#define CLOCK_RATE 4 // 4 == 16th notes, 8 == 32nd notes
+#define CLOCK_RATE 24 // 4 == 16th notes, 8 == 32nd notes, 24 == fuck_knows
 #define NUM_TRACKS 8
 #define EXTERNAL_CLOCK 0
 #define INTERNAL_CLOCK 1
@@ -22,6 +22,8 @@ void initialize();
 u8 getSyncMode();
 
 void toggleSyncMode();
+
+void setCurrentView(u8 view);
 
 void handlePadEvent(u8 type, u8 index, u8 value);
 
@@ -60,6 +62,8 @@ void updateQuantizedNotesArray();
 void calculateEuclideanRhythm();
 
 u8 getTempo();
+
+void setMsPerClock();
 
 u8 getMsPerClock();
 
@@ -106,5 +110,9 @@ void renderTempoButtons();
 void renderOctaveButtons();
 
 void renderChannels();
+
+void renderViewButtons();
+
+void clearAllPads();
 
 #endif
