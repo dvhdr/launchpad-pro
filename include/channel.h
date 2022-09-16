@@ -34,6 +34,7 @@ typedef struct Track
     u8 octave;
     u8 isMuted;
     u8 resolution;
+    u8 resolutionCounter;
 
     // UI
     u8 uiEuclidSequenceLength;

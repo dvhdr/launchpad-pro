@@ -10,6 +10,8 @@
 #define EXTERNAL_CLOCK 0
 #define INTERNAL_CLOCK 1
 #define DEFAULT_OCTAVE 3
+#define SEQUENCER_STOPPED 0
+#define SEQUENCER_PLAYING 1
 
 // UI
 #define TRACK_VIEW 0
@@ -22,6 +24,8 @@ void initialize();
 u8 getSyncMode();
 
 void toggleSyncMode();
+
+void setSequencerState(u8 state);
 
 void setCurrentView(u8 view);
 
@@ -66,6 +70,10 @@ u8 getTempo();
 void setMsPerClock();
 
 u8 getMsPerClock();
+
+void zeroCounters();
+
+void handleMidiInput(u8 port, u8 status, u8 d1, u8 d2);
 
 void handleNextPulse();
 

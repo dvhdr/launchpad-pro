@@ -11,6 +11,7 @@ static u8 currentPage = TRACK_VIEW;
 static u8 tempo = 115;
 static u8 msPerClock = 0;
 static u8 syncMode = INTERNAL_CLOCK;
+static u8 sequencerState = SEQUENCER_STOPPED;
 
 void initialize()
 {
@@ -98,7 +99,7 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                 // if Mute buttons
                 if ((index - 9) % 10 == 0)
                 {
-                    setMuteValue(((index - 9) / 10) - 1);
+                    setMuteValue(8 - ((index - 9) / 10));
                     break;
                 }
                         
@@ -229,6 +230,11 @@ void handlePadEvent(u8 type, u8 index, u8 value)
     }
 }
 
+void setSequencerState(u8 state)
+{
+    sequencerState = state;
+}
+
 void setTempoIncrease()
 {
     tempo++;
@@ -269,6 +275,7 @@ void setEuclidPatternLength(u8 bitNumber)
 {
     u8 bitMask = 1 << bitNumber;
     tracks[currentTrack].euclidSequenceLength ^= bitMask;
+    calculateEuclideanRhythm();
 }
 
 void setEuclidDensity(u8 bitNumber)
@@ -287,6 +294,7 @@ void setEuclidOffset(u8 bitNumber)
 {
     u8 bitMask = 1 << bitNumber;
     tracks[currentTrack].euclidOffset ^= bitMask;
+    calculateEuclideanRhythm();
 }
 
 void setTuringMachinePatternLength(u8 bitNumber)
@@ -389,25 +397,56 @@ u8 getMsPerClock()
     return msPerClock;
 }
 
-void handleNextPulse()
+void zeroCounters()
 {
-    static u8 resolutionCounter = 0;
-
-    if (resolutionCounter >= 6)
-    {
-        resolutionCounter = 0;
-    }
-
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        if (tracks[trackNumber].isMuted) { continue; }
-        if (resolutionCounter == tracks[trackNumber].resolution)
+        tracks[trackNumber].euclidSequencePosition = 0;
+        tracks[trackNumber].turingMachineSequencePosition = 0;
+        tracks[trackNumber].resolutionCounter = 0;
+    }
+}
+
+void handleMidiInput(u8 port, u8 status, u8 d1, u8 d2)
+{
+    if (status == MIDITIMINGCLOCK && port == DINMIDI)
+    {
+        if (getSyncMode() == EXTERNAL_CLOCK)
         {
-            incrementSequencerTrack(trackNumber);
+            hal_plot_led(TYPESETUP, 0, 0, MAXLED, 0);
+            handleNextPulse();
+            return;
         }
     }
 
-    resolutionCounter++;
+    if (status == MIDISTART)
+    {
+        setSequencerState(SEQUENCER_PLAYING);
+    }
+
+    if (status == MIDISTOP)
+    {
+        setSequencerState(SEQUENCER_STOPPED);
+        zeroCounters();
+    }
+}
+
+void handleNextPulse()
+{
+    if (sequencerState == SEQUENCER_STOPPED) { return; }
+
+    for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
+    {
+        tracks[trackNumber].resolutionCounter++;
+        if (tracks[trackNumber].resolutionCounter > tracks[trackNumber].resolution)
+        {
+            tracks[trackNumber].resolutionCounter = 0;
+
+            if (tracks[trackNumber].isMuted) { continue; }
+
+            incrementSequencerTrack(trackNumber);
+        }
+    }
 }
 
 void incrementSequencerTrack(u8 trackNumber)
@@ -571,7 +610,7 @@ void renderMuteButtons()
 {
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        u8 padNumber = 19 + (trackNumber * 10);
+        u8 padNumber = 9 + ((8 - trackNumber) * 10);
         if (tracks[trackNumber].isMuted)
         {
             hal_plot_led(TYPEPAD, padNumber, MAXLED, 0, 0);
