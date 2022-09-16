@@ -437,15 +437,16 @@ void handleNextPulse()
 
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        tracks[trackNumber].resolutionCounter++;
         if (tracks[trackNumber].resolutionCounter > tracks[trackNumber].resolution)
         {
             tracks[trackNumber].resolutionCounter = 0;
 
-            if (tracks[trackNumber].isMuted) { continue; }
-
-            incrementSequencerTrack(trackNumber);
+            if (!tracks[trackNumber].isMuted)
+            {
+                incrementSequencerTrack(trackNumber);
+            }
         }
+        tracks[trackNumber].resolutionCounter++;
     }
 }
 
@@ -465,6 +466,8 @@ void incrementSequencerTrack(u8 trackNumber)
 
 u8 nextGate(u8 trackNumber)
 {
+    u8 gate = isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition + tracks[trackNumber].euclidOffset);
+
     tracks[trackNumber].euclidSequencePosition++;
 
     if (tracks[trackNumber].euclidSequencePosition >= tracks[trackNumber].euclidSequenceLength)
@@ -472,12 +475,14 @@ u8 nextGate(u8 trackNumber)
         tracks[trackNumber].euclidSequencePosition = 0;
     }
 
-    return isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition + tracks[trackNumber].euclidOffset);
+    return gate;
 }
 
 u8 nextNote(u8 trackNumber)
 {
     insertRandom(trackNumber);
+
+    u8 note = tracks[trackNumber].turingMachineSequenceShiftRegister << tracks[trackNumber].turingMachineSequencePosition;
 
     tracks[trackNumber].turingMachineSequencePosition++;
 
@@ -486,7 +491,6 @@ u8 nextNote(u8 trackNumber)
         tracks[trackNumber].turingMachineSequencePosition = 0;
     }
 
-    u8 note = tracks[trackNumber].turingMachineSequenceShiftRegister << tracks[trackNumber].turingMachineSequencePosition;
     return getQuantizedNote(trackNumber, note);
 }
 
