@@ -25,6 +25,8 @@ u8 getSyncMode();
 
 void toggleSyncMode();
 
+void toggleAccents();
+
 void setSequencerState(u8 state);
 
 void setCurrentView(u8 view);
@@ -56,6 +58,8 @@ void setTuringMachineScale(u8 bitNumber);
 void setTuringMachineRandom(u8 bitNumber);
 
 void setChannel(u8 index);
+
+void setResolution(u8 index, u8 value);
 
 void toggleQuantizerBlackKeysValue(u8 note);
 
@@ -122,5 +126,9 @@ void renderChannels();
 void renderViewButtons();
 
 void clearAllPads();
+
+void renderResolution();
+
+void renderAccentButton();
 
 #endif

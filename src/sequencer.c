@@ -11,7 +11,7 @@ static u8 currentPage = TRACK_VIEW;
 static u8 tempo = 115;
 static u8 msPerClock = 0;
 static u8 syncMode = INTERNAL_CLOCK;
-static u8 sequencerState = SEQUENCER_STOPPED;
+static u8 sequencerState = SEQUENCER_PLAYING;
 
 void initialize()
 {
@@ -50,6 +50,12 @@ u8 getSyncMode()
 void toggleSyncMode()
 {
     syncMode ^= 1;
+    setSequencerState(SEQUENCER_PLAYING);
+}
+
+void toggleAccents()
+{
+    tracks[currentTrack].accentsOn ^= 1;
 }
 
 void setCurrentView(u8 view)
@@ -125,6 +131,20 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                     break;
                 }
 
+                // if Resolution view select
+                if (index == 97)
+                {
+                    setCurrentView(RESOLUTION_VIEW);
+                    break;
+                }
+
+                // if Gates? view select
+                if (index == 98)
+                {
+                    setCurrentView(GATES_VIEW_FOR_FUN);
+                    break;
+                }
+
                 switch (currentPage)
                 {
                     case TRACK_VIEW:
@@ -191,13 +211,19 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                             break;
                         }
 
+                        // if accents on
+                        if (index == 81)
+                        {
+                            toggleAccents();
+                        }
+
                         break;
                     }
 
                     case CHANNEL_VIEW:
                     {
                         u8 unitValue = index % 10;
-                        // Track 1
+                        
                         if (index >= 11 && index <= 88 && unitValue >= 1 && unitValue <= 8)
                         {
                             setChannel(index);
@@ -206,7 +232,13 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                     }
                     case RESOLUTION_VIEW:
                     {
-
+                        u8 unitValue = index % 10;
+                        
+                        if (index >= 11 && index <= 88 && unitValue >= 1 && unitValue <= 8)
+                        {
+                            setResolution(index, unitValue);
+                            break;
+                        }
                     }
                     case GATES_VIEW_FOR_FUN:
                     {
@@ -322,6 +354,12 @@ void setChannel(u8 index)
     tracks[track].midiChannelsFlags ^= (1 << (channel - 1));
 }
 
+void setResolution(u8 index, u8 value)
+{
+    u8 track = 8 - (index * 0.1);
+    tracks[track].resolution = value;
+}
+
 void toggleQuantizerBlackKeysValue(u8 note)
 {
     u8 bitPosition = quantizerBlackKeysLookupTable[note - 21];
@@ -409,6 +447,11 @@ void zeroCounters()
 
 void handleMidiInput(u8 port, u8 status, u8 d1, u8 d2)
 {
+    if (status == MIDISTART)
+    {
+        setSequencerState(SEQUENCER_PLAYING);
+    }
+
     if (status == MIDITIMINGCLOCK && port == DINMIDI)
     {
         if (getSyncMode() == EXTERNAL_CLOCK)
@@ -417,11 +460,6 @@ void handleMidiInput(u8 port, u8 status, u8 d1, u8 d2)
             handleNextPulse();
             return;
         }
-    }
-
-    if (status == MIDISTART)
-    {
-        setSequencerState(SEQUENCER_PLAYING);
     }
 
     if (status == MIDISTOP)
@@ -437,7 +475,7 @@ void handleNextPulse()
 
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        if (tracks[trackNumber].resolutionCounter > tracks[trackNumber].resolution)
+        if (tracks[trackNumber].resolution < tracks[trackNumber].resolutionCounter)
         {
             tracks[trackNumber].resolutionCounter = 0;
 
@@ -547,8 +585,14 @@ void playNote(u8 trackNumber, u8 note)
         if (note < 0) { continue; }
 
         // play new note
-        hal_send_midi(DINMIDI, NOTEON | channel, note, 127);
-        hal_send_midi(USBMIDI, NOTEON | channel, note, 127);
+        u8 velocity = 127;
+        if (tracks[trackNumber].accentsOn)
+        {
+            velocity = rand() % 127;
+        }
+
+        hal_send_midi(DINMIDI, NOTEON | channel, note, velocity);
+        hal_send_midi(USBMIDI, NOTEON | channel, note, velocity);
 
         // store off triggered note for next time
         tracks[trackNumber].previousNote = note;
@@ -589,6 +633,7 @@ void updateUi()
         renderTuringMachineScale();
         renderTuringMachineRandom();
         renderQuantizer();
+        renderAccentButton();
     }
 
     if (currentPage == CHANNEL_VIEW)
@@ -598,7 +643,7 @@ void updateUi()
 
     if (currentPage == RESOLUTION_VIEW)
     {
-
+        renderResolution();
     }
 
     if (currentPage == GATES_VIEW_FOR_FUN)
@@ -795,5 +840,33 @@ void clearAllPads()
     for (u8 i = 1; i < 99; i ++)
     {
         hal_plot_led(TYPEPAD, i, 0, 0, 0);
+    }
+}
+
+void renderResolution()
+{
+    for (u8 i = 0; i < NUM_TRACKS; i++)
+    {
+        u8 index = 81 - (i * 10);
+        for (u8 j = 0; j < 8; j++)
+        {
+            hal_plot_led(TYPEPAD, index, MAXLED, MAXLED, MAXLED);
+            index++;
+        }
+        index = (80 - (i * 10)) + tracks[i].resolution;
+
+        hal_plot_led(TYPEPAD, index, tracks[i].red, tracks[i].green, tracks[i].blue);
+    }
+}
+
+void renderAccentButton()
+{
+    if (tracks[currentTrack].accentsOn)
+    {
+        hal_plot_led(TYPEPAD, 81, tracks[currentTrack].red, tracks[currentTrack].green, tracks[currentTrack].blue);
+    }
+    else
+    {
+        hal_plot_led(TYPEPAD, 81, MAXLED, MAXLED, MAXLED);
     }
 }

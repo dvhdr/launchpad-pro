@@ -26,6 +26,7 @@ typedef struct Track
 
     u8 previousNote;
     u16 quantizerValues;
+    u8 accentsOn;
 
     u32 quantizedNotesArray;
 
