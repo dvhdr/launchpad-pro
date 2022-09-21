@@ -17,7 +17,7 @@
 #define TRACK_VIEW 0
 #define CHANNEL_VIEW 1
 #define RESOLUTION_VIEW 2
-#define GATES_VIEW_FOR_FUN 3
+#define SEQUENCE_MUTES_VIEW 3
 
 void initialize();
 
@@ -60,6 +60,8 @@ void setTuringMachineRandom(u8 bitNumber);
 void setChannel(u8 index);
 
 void setResolution(u8 index, u8 value);
+
+void setMute(u8 index);
 
 void toggleQuantizerBlackKeysValue(u8 note);
 
@@ -130,5 +132,7 @@ void clearAllPads();
 void renderResolution();
 
 void renderAccentButton();
+
+void renderMutes();
 
 #endif

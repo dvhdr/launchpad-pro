@@ -31,6 +31,7 @@ void initialize()
         tracks[i].midiChannelsFlags = Pow(2, i);
         tracks[i].octave = DEFAULT_OCTAVE;
         tracks[i].resolution = 5;
+        tracks[i].sequenceMutesArray = 0;
 
         // UI
         tracks[i].uiEuclidSequenceLength = 8;
@@ -138,10 +139,10 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                     break;
                 }
 
-                // if Gates? view select
+                // if mutes view select
                 if (index == 98)
                 {
-                    setCurrentView(GATES_VIEW_FOR_FUN);
+                    setCurrentView(SEQUENCE_MUTES_VIEW);
                     break;
                 }
 
@@ -240,9 +241,15 @@ void handlePadEvent(u8 type, u8 index, u8 value)
                             break;
                         }
                     }
-                    case GATES_VIEW_FOR_FUN:
+                    case SEQUENCE_MUTES_VIEW:
                     {
-
+                        u8 unitValue = index % 10;
+                        
+                        if (index >= 11 && index <= 88 && unitValue >= 1 && unitValue <= 8)
+                        {
+                            setMute(index);
+                            break;
+                        }
                     }
                 }
             }
@@ -354,6 +361,13 @@ void setChannel(u8 index)
     tracks[track].midiChannelsFlags ^= (1 << (channel - 1));
 }
 
+void setMute(u8 index)
+{
+    u8 track = 8 - (index / 10);
+    u8 channel = index % 10;
+    tracks[track].sequenceMutesArray ^= (1 << (channel - 1));
+}
+
 void setResolution(u8 index, u8 value)
 {
     u8 track = 8 - (index * 0.1);
@@ -380,6 +394,11 @@ void toggleQuantizerWhiteKeysValue(u8 note)
 
 void updateQuantizedNotesArray()
 {
+    if (!tracks[currentTrack].quantizerValues)
+    {
+        killNotes(currentTrack);
+    }
+
     tracks[currentTrack].quantizedNotesArray = 0;
 
     for (u8 quantizerIndex = 0; quantizerIndex < 12; quantizerIndex++)
@@ -411,7 +430,7 @@ void calculateEuclideanRhythm()
     }
 
     u8 position = 0;
-    u8 stride = tracks[currentTrack].euclidSequenceLength - tracks[currentTrack].euclidDensity;
+    u8 stride = tracks[currentTrack].euclidSequenceLength / tracks[currentTrack].euclidDensity;
     for (u8 i = 0; i < tracks[currentTrack].euclidDensity; i++)
     {
         position = (position + stride + tracks[currentTrack].euclidOffset) % tracks[currentTrack].euclidSequenceLength;
@@ -475,15 +494,19 @@ void handleNextPulse()
 
     for (u8 trackNumber = 0; trackNumber < NUM_TRACKS; trackNumber++)
     {
-        if (tracks[trackNumber].resolution < tracks[trackNumber].resolutionCounter)
+        if (tracks[trackNumber].resolutionCounter > tracks[trackNumber].resolution)
         {
             tracks[trackNumber].resolutionCounter = 0;
+        }
 
+        if (tracks[trackNumber].resolutionCounter == 0)
+        {
             if (!tracks[trackNumber].isMuted)
             {
                 incrementSequencerTrack(trackNumber);
             }
         }
+
         tracks[trackNumber].resolutionCounter++;
     }
 }
@@ -506,6 +529,8 @@ u8 nextGate(u8 trackNumber)
 {
     u8 gate = isFlagOn32(tracks[trackNumber].euclidSequenceFlags, tracks[trackNumber].euclidSequencePosition + tracks[trackNumber].euclidOffset);
 
+    u8 isMutedViaSequence = isFlagOn8(tracks[trackNumber].sequenceMutesArray, tracks[trackNumber].euclidSequencePosition * 0.25);
+
     tracks[trackNumber].euclidSequencePosition++;
 
     if (tracks[trackNumber].euclidSequencePosition >= tracks[trackNumber].euclidSequenceLength)
@@ -513,7 +538,7 @@ u8 nextGate(u8 trackNumber)
         tracks[trackNumber].euclidSequencePosition = 0;
     }
 
-    return gate;
+    return !isMutedViaSequence && gate;
 }
 
 u8 nextNote(u8 trackNumber)
@@ -646,9 +671,9 @@ void updateUi()
         renderResolution();
     }
 
-    if (currentPage == GATES_VIEW_FOR_FUN)
+    if (currentPage == SEQUENCE_MUTES_VIEW)
     {
-
+        renderMutes();
     }
 
     // STRETCH
@@ -868,5 +893,26 @@ void renderAccentButton()
     else
     {
         hal_plot_led(TYPEPAD, 81, MAXLED, MAXLED, MAXLED);
+    }
+}
+
+void renderMutes()
+{
+    for (u8 track = 0; track < NUM_TRACKS; track++)
+    {
+        for (u8 i = 0; i < 8; i++)
+        {
+            u8 isMuted = isFlagOn8(tracks[track].sequenceMutesArray, i);
+
+            u8 padIndex = (((8 - track) * 10) + i) + 2; // Cuz +1 for starting from 11, 21 etc, and +1 for counting from 0
+            if (isMuted)
+            {
+                hal_plot_led(TYPEPAD, padIndex, tracks[currentTrack].red, tracks[currentTrack].green, tracks[currentTrack].blue);
+            }
+            else
+            {
+                hal_plot_led(TYPEPAD, padIndex, MAXLED, MAXLED, MAXLED);
+            }
+        }
     }
 }
