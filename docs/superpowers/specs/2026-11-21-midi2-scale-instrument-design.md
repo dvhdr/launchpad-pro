@@ -97,17 +97,32 @@ pressure natively, and Windows now has an in-box USB MIDI 2.0 driver.
 
 **Velocity (both kept; selectable).**
 
-- *Peak-window* (default): on the library's press event, sample that pad's raw
-  ADC value every 1 ms tick for a short window (default 2 ms; tunable constant)
-  and use the peak minus baseline, normalised and curved, as 16-bit velocity.
-  True sensor resolution and the most even response; adds ~2 ms note-on
-  latency.
-- *Zero-latency*: send the note on the library's press event with no delay.
-  Coarse value = library 7-bit velocity; fine bits interpolated from the raw
-  ADC reading at that instant within that 7-bit bucket. No added latency; extra
-  resolution is partly smoothing.
+Finding that shaped this: the library's `cx_pad.o` already captures a running
+per-pad peak (`ADC_Max`, 64 × u16, a linkable global) before it raises the
+press event, then squeezes it to 7 bits with its own curve. So:
+
+- *Zero-latency*: on the library's press event, read that pad's `ADC_Max`
+  peak (12-bit) at once and turn it into 16-bit velocity. Full sensor
+  resolution, no added delay beyond today's firmware. (Revised from the
+  earlier "interpolate within the 7-bit bucket" idea, which turned out to be
+  meaningless once the library's own peak capture was found.)
+- *Peak-window* (default): send nothing at the press event. Keep sampling that
+  pad's raw ADC for a short window afterwards (default 2 ms, tunable constant)
+  and use the highest of `ADC_Max` and the window peak. This catches presses
+  that keep rising after the library's trigger point (slow or "pushed"
+  strikes), giving the most even response. Adds about 2 ms of note-on latency.
+- In both modes the menu curve is applied to the raw peak. The library's
+  7-bit curve is bypassed, except that its 7-bit value is used for DIN and
+  MIDI 1.0 fallback when the curve is "Linear".
+  *(Builder's call; if reading `ADC_Max` proves unreliable on the device,
+  Zero-latency falls back to the raw `adc_buffer` reading at the press event.)*
 
 The player chose: implement both, selectable in the menu.
+
+**Structure (builder's call).** The MIDI 2.0 layer (`src/usb`, `src/ump`,
+`include/midi2.h`) is a reusable platform underneath `app.h`. The scale
+instrument *is* the app: it replaces `src/app.c`. Goal 7 means other apps built
+from this tree, without the instrument, still compile and work unchanged.
 
 ## Design
 
@@ -169,9 +184,15 @@ The player chose: implement both, selectable in the menu.
     u8 note, u32 value)`, `hal_send_channel_pressure2(...)`. Each falls back
     to the 7-bit MIDI 1.0 equivalent automatically when MIDI 2.0 isn't
     active.
-- **Risk to verify early:** `c_midi.o`'s `usbmidi_poll` must not write EP1 IN
-  or re-validate EP1 OUT while in alt 1. If it does, the fallback is to also
-  replace `c_midi.o` (reimplementing its USB and DIN paths).
+- **Known conflict with `c_midi.o`:** `usbmidi_poll` → `usbmidi_tx` writes
+  EP1 IN whenever its outgoing fifo (`MIDIToHst`) has data. `main.o` calls
+  `midi_flush_windows_buffer` directly (not through `hal_send_midi`), and
+  that puts a MIDI 1.0 "Windows flush" message into the fifo after
+  configuration. `c_midi.o` also calls `SetEPRxValid` on EP1 by itself. In
+  alt 1, all three must be neutralised, by `--wrap` of `usbmidi_poll` and
+  `midi_flush_windows_buffer` (called from `main.o`, so wrappable) and by
+  clearing `MIDIToHst` on the switch to alt 1. Otherwise `c_midi.o` gets
+  replaced in full (see the open question on hardware testing).
 
 ### 3. Pad engine (`src/pads/`)
 
@@ -220,8 +241,13 @@ Button numbering is from `app.h` (bottom-left pad = 11, top row of buttons
 
 **Play page (default):**
 - 8×8 grid = scale layout.
-- 91 / 92 (top-row up/down arrows): octave up/down (range −2 … +8 octaves
-  around C3, clamped to keep some notes in range).
+- 91 / 92 (top-row up/down arrows): octave up/down.
+- **Octave model (builder's call):** naming follows Ableton/Launchpad95, where
+  C3 = MIDI note 60. The stored octave is 0–7 and maps to octaves −1 … 6. In
+  non-absolute-root mode the bottom-left pad = root note in that octave,
+  `12 × (stored + 1) + root` (stored 3 → C3 = 60, the default). In
+  absolute-root mode it is C in that octave. The arrows and the 8 octave pads
+  on the Scale page cover the same range.
 - 93 / 94 (left/right arrows): root down/up by one semitone.
 - Other buttons unused for now (unlit).
 
