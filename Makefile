@@ -24,7 +24,9 @@ TEST_SOURCES += tests/test_ump_codec.c src/ump/ump_codec.c
 TEST_SOURCES += tests/test_ump_tx.c src/ump/ump_tx.c tests/stubs/stubs.c
 TEST_SOURCES += tests/test_ump_stream.c src/ump/ump_stream.c
 TEST_SOURCES += tests/test_ump_rx.c src/ump/ump_rx.c
-TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests
+TEST_SOURCES += tests/test_usb_desc.c src/usb/usb_desc.c
+GOLDEN_DESC = $(BUILDDIR)/tests/golden_usb_desc_rodata.bin
+TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests -DGOLDEN_DESC=\"$(GOLDEN_DESC)\"
 
 # tools
 # -include cstdint fixes the pinned libintelhex header under modern g++
@@ -79,10 +81,16 @@ $(BUILDDIR)/%.o: %.c
 submodules:
 	@test -f $(TOOLS)/libintelhex/include/intelhex.h || { echo "run: git submodule update --init"; exit 1; }
 
+# original USB descriptors, extracted from the vendor archive (alt 0 must stay byte-identical)
+$(GOLDEN_DESC): lib/launchpad_pro.a
+	mkdir -p $(BUILDDIR)/tests/ar
+	cd $(BUILDDIR)/tests/ar && arm-none-eabi-ar x $(CURDIR)/lib/launchpad_pro.a usb_desc.o
+	arm-none-eabi-objcopy -O binary --only-section=.rodata $(BUILDDIR)/tests/ar/usb_desc.o $@
+
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
-$(TEST_BIN): $(TEST_SOURCES) $(wildcard tests/*.h tests/stubs/*.h include/*.h src/*/*.h)
+$(TEST_BIN): $(GOLDEN_DESC) $(TEST_SOURCES) $(wildcard tests/*.h tests/stubs/*.h include/*.h src/*/*.h)
 	mkdir -p $(dir $@)
 	$(HOST_GCC) $(TEST_CFLAGS) $(TEST_SOURCES) -o $@
 
