@@ -37,13 +37,21 @@ pressure natively, and Windows now has an in-box USB MIDI 2.0 driver.
 7. Existing open-firmware apps keep working: `include/app.h` and its ABI are
    not changed; `hal_send_midi` / `hal_send_sysex` / `app_midi_event` /
    `app_sysex_event` keep working in both USB modes.
+8. **MIDI-CI with Property Exchange** (added after review). This lets a DAW
+   or editor discover and recognise the device, and lets a PC read and edit
+   the scale settings and play options. Changes made on the device are pushed
+   back to a subscribed editor. See section 8.
 
 ## Non-goals
 
 - MPE mode (explicitly declined).
 - Drum-rack layout and note repeat from Launchpad95.
 - Ableton Live integration, session/clip control.
-- MIDI-CI, Property Exchange, Profiles.
+- MIDI-CI Profiles. No standard profile fits a pad scale instrument.
+- MIDI-CI Process Inquiry. Neither stated purpose (recognition, editing)
+  needs it.
+- PE partial Set (`setPartial`), Mcoded7/zlib body encodings, and PE over
+  DIN.
 - MIDI 2.0 over the DIN ports (DIN stays MIDI 1.0).
 - Validating on macOS/Linux. The implementation follows the USB MIDI 2.0
   spec so it should work there, but Windows is the target and test host.
@@ -381,6 +389,12 @@ bright):
   - Settings round trip, blank and corrupt flash, and coalesced/unchanged
     writes. Use fixed-width types for UMP words and pressure calculations
     in host tests, since `u32` in `app.h` maps to `unsigned long`.
+  - MIDI-CI: byte-exact Discovery Reply, MUID collision and Invalidate, PE
+    Capabilities, Get of each resource (including chunked replies at the
+    320-byte limit), Set accepted/rejected/out-of-range, multi-chunk Set
+    reassembly and overflow, Subscribe plus a notify on a device-menu change,
+    malformed JSON and headers, and the same flows over both alt 0 SysEx and
+    alt 1 SysEx7.
 - The existing simulator builds and runs.
 - The ARM firmware links and fits the app flash region and RAM. Check the
   ELF load addresses and packaged image against the flash limit, including
@@ -394,6 +408,74 @@ bright):
   fallback on a machine without MIDI Services; reconnect and reset during
   traffic; compare the feel and measured note-on latency of both velocity
   modes against the stock device.
+
+### 8. MIDI-CI and Property Exchange (`src/ci/`)
+
+Purpose, in the player's words: let a DAW recognise the device, and edit the
+scales and options from the PC.
+
+- **Spec target:** MIDI-CI v1.2 and Common Rules for Property Exchange v1.1
+  (and later, where compatible). Message formats are Universal SysEx
+  `F0 7E <dev> 0D <sub-ID#2> …`.
+- **Where it is answered:** on the Standalone port only. In alt 1 that is
+  SysEx7 on group `0x0`; in alt 0 it is SysEx on the "Standalone Port" cable.
+  Device ID `0x7F` (Function Block) is accepted. The CI path consumes these
+  messages, so `app_sysex_event` never sees them. All other SysEx passes
+  through to the app as before.
+- **Identity:** a 28-bit MUID generated at boot. Its seed mixes the
+  per-device Product Instance ID with ADC noise, avoiding the reserved and
+  broadcast ranges. On an Invalidate MUID addressed to us, or a collision,
+  pick a new one and run Discovery again. Discovery Reply carries the same
+  manufacturer/family/model/version identity as the UMP Device Identity, so
+  a host sees one consistent device.
+- **Discovery Reply capabilities:** Property Exchange only (no Profiles, no
+  Process Inquiry). Receivable max SysEx = 320 bytes on every path, so one
+  limit covers both alt 0 and alt 1. *(Builder's call.)*
+- **PE Capabilities:** 1 simultaneous request, PE v1.1, ASCII JSON bodies
+  only (no Mcoded7), chunk bodies sized to keep each message within the
+  320-byte limit. Chunked bodies are sent and received in order. A
+  multi-chunk Set is reassembled into a bounded body buffer (≈ 512 bytes)
+  before it is applied. Oversized bodies get a 413-style error status.
+- **Resources** (Get unless noted):
+  - `ResourceList`: lists the resources below, each with a JSON `schema`.
+    Generic editors (e.g. the MIDI Association's MIDI 2.0 Workbench) can then
+    show editable controls without a custom app.
+  - `DeviceInfo`: manufacturer ID, family, model, version, and manufacturer /
+    family / model / version strings. These must match the UMP Device
+    Identity and Endpoint Name, so a DAW shows one consistent device.
+  - `ChannelList`: the one channel the instrument plays on, with a title.
+  - `X-ScaleSettings` (Get / Set / Subscribe): `root` 0–11, `scale` (index
+    into `X-ScaleList`), `octave` 0–7, `layout` (enum string), and
+    `absoluteRoot` (bool).
+  - `X-PlayOptions` (Get / Set / Subscribe): `velocityMode`
+    (`peakWindow`/`zeroLatency`/`fixed`), `velocityCurve`
+    (`soft`/`linear`/`hard`), `pressureMode` (`poly`/`channel`/`off`),
+    `pressureThreshold` (`low`/`med`/`high`), `dinMirror` (bool), and
+    `channel` (1–16).
+  - `X-ScaleList`: the scale names in index order, read-only, so an editor
+    can show names rather than numbers.
+- **Set semantics:**
+  - Full-object Set only. The fields given replace their values. Missing
+    fields keep their current values, and unknown fields are ignored.
+  - Any out-of-range value rejects the whole Set with an error status, and
+    nothing changes.
+  - An accepted Set is applied exactly like the same change made in the
+    on-device menu: active notes are released, the grid is redrawn, and the
+    deferred flash save is scheduled.
+- **Subscriptions:** one subscriber per resource (latest wins). A change made
+  on the device menu, or by a different PE initiator, sends a `full` notify
+  to the subscriber. Subscriptions are dropped on USB reset, alt change or
+  MUID invalidation.
+- **JSON:** a small, bounded, hand-written parser for flat objects of
+  integers, booleans and short strings, plus a writer into fixed buffers. No
+  heap. Malformed input returns an error status and never crashes.
+- **Budget:** about 1.5 KB of RAM total for the CI receive, transmit and body
+  buffers. Report the flash cost in the size report.
+- **Windows caveat:** Windows MIDI Services may only pass MIDI-CI through to
+  apps rather than handle it itself. Hardware testing uses a tool known to
+  speak PE (MIDI 2.0 Workbench, or the Windows MIDI Services console's
+  MIDI-CI tools if present). DAW recognition is verified in whichever DAW the
+  player uses.
 
 ## Delivery stages
 
@@ -423,7 +505,15 @@ The player has the hardware and will test on Windows at the checkpoint.
    If something fails, fix it here, or replace `c_midi.o`, before going on.
 2. **Instrument.** Scale engine, pad engine (both velocity modes, curves,
    pressure), menu, persistence, all host-tested.
-3. **Final hardware pass.** The full checklist in section 7.
+3. **MIDI-CI and Property Exchange.** Section 8, host-tested, built on the
+   instrument's settings model.
+4. **Final hardware pass.** The full checklist in section 7, plus MIDI-CI:
+   - a PE-capable tool discovers the device, lists resources, and reads
+     `DeviceInfo`;
+   - editing the scale and options from the PC changes the grid at once and
+     survives a power cycle;
+   - a change made on the device's menu shows up in the subscribed tool;
+   - the player's DAW shows the device by name.
 
 ## Left to the builder
 
