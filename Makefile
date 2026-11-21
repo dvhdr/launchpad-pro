@@ -23,6 +23,7 @@ TEST_SOURCES += tests/run_tests.c tests/test_harness.c
 TEST_SOURCES += tests/test_ump_codec.c src/ump/ump_codec.c
 TEST_SOURCES += tests/test_ump_tx.c src/ump/ump_tx.c tests/stubs/stubs.c
 TEST_SOURCES += tests/test_ump_stream.c src/ump/ump_stream.c
+TEST_SOURCES += tests/test_ump_rx.c src/ump/ump_rx.c
 TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests
 
 # tools

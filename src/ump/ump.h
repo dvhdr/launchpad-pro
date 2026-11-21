@@ -79,4 +79,18 @@ void ump_stream_set_protocol_hook(void (*fn)(uint8_t old_proto));
  * Returns 1 if the protocol changed. */
 int ump_stream_handle(const uint32_t msg[4]);
 
+/* ---- RX section: UMP words from USB EP1 OUT -> app callbacks ---- */
+
+#define UMP_RX_WORDS 128
+
+/* Empties the ring, drops any partial message, resets both SysEx reassemblers.
+ * Does not touch the TX queue or the stream state. */
+void ump_rx_reset(void);
+uint16_t ump_rx_free_words(void);
+/* Interrupt context. Words that don't fit are dropped and counted. */
+void ump_rx_push_words(const uint32_t *w, uint16_t n);
+/* Main-loop context: frames whole messages and dispatches them to the app. */
+void ump_rx_poll(void);
+uint32_t ump_rx_overflows(void);
+
 #endif
