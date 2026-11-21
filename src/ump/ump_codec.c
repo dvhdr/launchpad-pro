@@ -225,7 +225,7 @@ uint8_t ump_to_midi1(const uint32_t *msg, uint8_t out[][3], uint8_t max_out)
 uint16_t ump_sysex7_pack(uint32_t *out, uint16_t max_words, uint8_t group, const uint8_t *data,
                          uint16_t len)
 {
-	uint16_t packets, i, p;
+	uint16_t packets, p;
 	uint32_t n;
 
 	if (len && data[0] == 0xF0) {
@@ -240,28 +240,32 @@ uint16_t ump_sysex7_pack(uint32_t *out, uint16_t max_words, uint8_t group, const
 	if (n > max_words)
 		return 0;
 
-	for (p = 0; p < packets; p++) {
-		uint8_t b[6] = {0, 0, 0, 0, 0, 0};
-		uint16_t remaining = (uint16_t)(len - p * 6);
-		uint8_t cnt = remaining > 6 ? 6 : (uint8_t)remaining;
-		uint8_t st;
-
-		if (packets == 1)
-			st = 0;
-		else if (p == 0)
-			st = 1;
-		else if (p == packets - 1)
-			st = 3;
-		else
-			st = 2;
-		for (i = 0; i < cnt; i++)
-			b[i] = data[p * 6 + i] & 0x7F;
-		out[p * 2] = (3u << 28) | ((uint32_t)(group & 0xF) << 24) | ((uint32_t)st << 20) |
-		             ((uint32_t)cnt << 16) | ((uint32_t)b[0] << 8) | b[1];
-		out[p * 2 + 1] = ((uint32_t)b[2] << 24) | ((uint32_t)b[3] << 16) |
-		                 ((uint32_t)b[4] << 8) | b[5];
-	}
+	for (p = 0; p < packets; p++)
+		ump_sysex7_packet(out + 2 * p, group, data, len, p, packets);
 	return (uint16_t)n;
+}
+
+void ump_sysex7_packet(uint32_t out[2], uint8_t group, const uint8_t *payload, uint16_t len,
+                       uint16_t p, uint16_t packets)
+{
+	uint8_t b[6] = {0, 0, 0, 0, 0, 0};
+	uint16_t remaining = (uint16_t)(len - p * 6);
+	uint8_t cnt = remaining > 6 ? 6 : (uint8_t)remaining;
+	uint8_t st, i;
+
+	if (packets == 1)
+		st = 0;
+	else if (p == 0)
+		st = 1;
+	else if (p == packets - 1)
+		st = 3;
+	else
+		st = 2;
+	for (i = 0; i < cnt; i++)
+		b[i] = payload[p * 6 + i] & 0x7F;
+	out[0] = (3u << 28) | ((uint32_t)(group & 0xF) << 24) | ((uint32_t)st << 20) |
+	         ((uint32_t)cnt << 16) | ((uint32_t)b[0] << 8) | b[1];
+	out[1] = ((uint32_t)b[2] << 24) | ((uint32_t)b[3] << 16) | ((uint32_t)b[4] << 8) | b[5];
 }
 
 void ump_sysex7_rx_reset(struct ump_sysex7_rx *rx)

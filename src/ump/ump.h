@@ -30,6 +30,10 @@ uint8_t ump_to_midi1(const uint32_t *msg, uint8_t out[][3], uint8_t max_out);
 /* SysEx7: data includes F0..F7 (stripped). Returns words written, 0 if it won't fit. */
 uint16_t ump_sysex7_pack(uint32_t *out, uint16_t max_words, uint8_t group, const uint8_t *data,
                          uint16_t len);
+/* Packet p (of packets) of a SysEx7 payload of len bytes (F0/F7 already
+ * stripped): the two words ump_sysex7_pack writes at out[2p]. */
+void ump_sysex7_packet(uint32_t out[2], uint8_t group, const uint8_t *payload, uint16_t len,
+                       uint16_t p, uint16_t packets);
 
 struct ump_sysex7_rx {
 	uint8_t buf[320];
@@ -58,6 +62,13 @@ int ump_tx_push(enum ump_tx_class cls, const uint32_t *msg, uint8_t words);
 int ump_tx_push_attack(const uint32_t *msg, uint8_t words);
 /* Release is 1 or 2 words. Succeeds while reserve >= 2 (reserve -= 2 whatever its size); drops pending pressure for the key. */
 int ump_tx_push_release(const uint32_t *msg, uint8_t words);
+/* SysEx7 straight into the control ring: data is a whole F0..F7 message
+ * (packed as ump_sysex7_pack does). 0, or -1 with nothing queued if it doesn't
+ * fit or data isn't F0..F7. */
+int ump_tx_push_sysex7(uint8_t group, const uint8_t *data, uint16_t len);
+/* Drops the queued note-ring messages and pending pressure and zeroes the
+ * release reserve; the control ring is kept. */
+void ump_tx_reset_notes(void);
 /* note 0xFF = channel pressure. Coalesces by key; drops silently if no slot is free. */
 void ump_tx_push_pressure(uint8_t group, uint8_t ch, uint8_t note, const uint32_t msg[2]);
 /* Pops whole messages (control, then notes, then pressure) that fit in 64 bytes.
