@@ -166,36 +166,64 @@ static void test_tx_sysex7_all_or_nothing_ring(void)
 	static const uint8_t no_f7[] = {0xF0, 1, 2};
 	static const uint8_t no_f0[] = {1, 2, 0xF7};
 	static const uint8_t only_f0[] = {0xF0};
+	static const uint8_t empty[] = {0xF0, 0xF7};
 	static uint32_t got[200];
 	int i;
 
 	uint32_t two[2] = {0x40B00000u, 0};
 
 	ump_tx_reset();
-	for (i = 0; i < 46; i++)
+	for (i = 0; i < 38; i++)
 		CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, ctl, 4), 0);
 	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, two, 2), 0);
-	/* 6 words free (186 used); sx8 needs 8 words (19 bytes -> 4 packets) */
+	/* 38 words free (154 used): app SysEx leaves the stream headroom, so
+	 * 6 words fit; sx8 needs 8 words (19 bytes -> 4 packets) */
 	CHECK_EQ(ump_tx_push_sysex7(0, sx8, sizeof sx8), -1);
 	CHECK_EQ(ump_tx_push_sysex7(0, no_f7, sizeof no_f7), -1);
 	CHECK_EQ(ump_tx_push_sysex7(0, no_f0, sizeof no_f0), -1);
 	CHECK_EQ(ump_tx_push_sysex7(0, only_f0, sizeof only_f0), -1);
 	CHECK_EQ(ump_tx_push_sysex7(0, only_f0, 0), -1);
-	/* 18 bytes -> 3 packets = 6 words: exactly fits */
+	/* 18 bytes -> 3 packets = 6 words: exactly fits above the headroom */
 	CHECK_EQ(ump_tx_push_sysex7(0, sx6, sizeof sx6), 0);
+	CHECK_EQ(ump_tx_push_sysex7(1, empty, 2), -1);		/* would eat the headroom */
+	for (i = 0; i < UMP_TX_CONTROL_STREAM_HEADROOM / 4; i++)
+		CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, ctl, 4), 0);	/* stream replies use it */
 	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, two, 2), -1);	/* ring full */
 	CHECK_EQ(drain_words(got, 200), UMP_TX_CONTROL_WORDS);
-	CHECK_EQ(got[186] >> 20, 0x301);			/* group 0, start */
-	CHECK_EQ(got[190] >> 20, 0x303);			/* end */
+	CHECK_EQ(got[154] >> 20, 0x301);			/* group 0, start */
+	CHECK_EQ(got[158] >> 20, 0x303);			/* end */
 
 	/* empty sysex: one complete packet with no bytes */
-	{
-		static const uint8_t empty[] = {0xF0, 0xF7};
-		CHECK_EQ(ump_tx_push_sysex7(1, empty, 2), 0);
-		CHECK_EQ(drain_words(got, 200), 2);
-		CHECK_EQ(got[0], 0x31000000u);
-		CHECK_EQ(got[1], 0);
-	}
+	CHECK_EQ(ump_tx_push_sysex7(1, empty, 2), 0);
+	CHECK_EQ(drain_words(got, 200), 2);
+	CHECK_EQ(got[0], 0x31000000u);
+	CHECK_EQ(got[1], 0);
+}
+
+/* App system messages (clock) stop short of the stream-reply headroom; the
+ * stream responder's plain pushes can still use it. */
+static void test_tx_control_app_headroom(void)
+{
+	static const uint32_t clk[1] = {0x10F80000u};
+	static const uint32_t ctl[4] = {0xF0010101u, 0x82000300u, 0, 0};
+	static const uint32_t bad[1] = {0x40903C00u};		/* MT 4 needs 2 words */
+	static uint32_t got[200];
+	int n = 0, i;
+
+	ump_tx_reset();
+	CHECK_EQ(ump_tx_push_control_app(bad, 1), -1);
+	while (ump_tx_push_control_app(clk, 1) == 0 && n < 1000)
+		n++;
+	CHECK_EQ(n, UMP_TX_CONTROL_WORDS - UMP_TX_CONTROL_STREAM_HEADROOM);
+	CHECK(UMP_TX_CONTROL_STREAM_HEADROOM >= 28);		/* full Endpoint Discovery reply */
+	for (i = 0; i < UMP_TX_CONTROL_STREAM_HEADROOM / 4; i++)
+		CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, ctl, 4), 0);
+	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, clk, 1), -1);
+	CHECK_EQ(drain_words(got, 200), UMP_TX_CONTROL_WORDS);
+	CHECK_EQ(got[0], clk[0]);
+	CHECK_EQ(got[n], ctl[0]);
+	CHECK_EQ(ump_tx_push_control_app(clk, 1), 0);		/* room again */
+	CHECK_EQ(drain_words(got, 200), 1);
 }
 
 static void test_tx_drop_group_pressure(void)
@@ -220,6 +248,7 @@ void test_ump_tx_all(void)
 {
 	RUN(test_tx_sysex7_matches_pack);
 	RUN(test_tx_sysex7_all_or_nothing_ring);
+	RUN(test_tx_control_app_headroom);
 	RUN(test_tx_drop_group_pressure);
 	RUN(test_tx_priority_and_le);
 	RUN(test_tx_pressure_coalesce_and_stale);

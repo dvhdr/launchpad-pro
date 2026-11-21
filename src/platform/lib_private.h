@@ -22,10 +22,13 @@ typedef char lib_private_cx_fifo_size[sizeof(cx_fifo) == 258 ? 1 : -1];
 typedef struct cx_fifo1k cx_fifo1k;
 
 extern cx_fifo MIDIToDev, MIDIDinIn;
-extern cx_fifo1k MIDIToHst;
+/* MIDIToHst: c_midi's USB IN queue; MIDIDinOut (c_midi.o, common): DIN Out */
+extern cx_fifo1k MIDIToHst, MIDIDinOut;
 
 void fifo_flush(cx_fifo *f);
 void fifo1k_flush(cx_fifo1k *f);
+/* 1 if not empty, else 0 ((push ^ pop) & 0x3FF, cx_fifo1k.o) */
+uint8_t fifo1k_unempty(cx_fifo1k *f);
 uint8_t fifo_unempty(cx_fifo *f);
 void fifo_push1(cx_fifo *f, uint8_t b);
 

@@ -290,6 +290,10 @@ static void test_gtb_request_in_alt0(void)
 	CHECK_EQ(drive_data_setup_result(), USB_UNSUPPORT);
 	setup_request(0x81, 0x06, 0x2401, 1, 255);		/* other type */
 	CHECK_EQ(drive_data_setup_result(), USB_UNSUPPORT);
+	setup_request(0x01, 0x06, 0x2601, 1, 255);		/* host-to-device: not a GET */
+	CHECK_EQ(drive_data_setup_result(), USB_UNSUPPORT);
+	setup_request(0xA1, 0x06, 0x2601, 1, 255);		/* class type */
+	CHECK_EQ(drive_data_setup_result(), USB_UNSUPPORT);
 
 	/* also served in alt 1 */
 	enter_alt1();

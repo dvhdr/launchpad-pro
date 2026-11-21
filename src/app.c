@@ -161,8 +161,9 @@ void app_sysex_event(u8 port, u8 * data, u16 count)
 
 void app_aftertouch_event(u8 index, u8 value)
 {
-    // send poly aftertouch to the USB "MIDI" port
-    hal_send_midi(USBMIDI, POLYAFTERTOUCH | 0, index, value);
+    // poly pressure on the Standalone port, with the pad notes (32-bit and
+    // coalesced in MIDI 2.0, 7-bit otherwise)
+    hal_send_poly_pressure2(USBSTANDALONE, 0, index, ump_scale_up(value, 7, 32));
 }
 
 //______________________________________________________________________________

@@ -5,20 +5,24 @@
 
 #ifdef HOST_TEST
 
-/* Defined in tests/stubs/stubs.c. Called at the start of irq_save, before the
- * caller touches any shared state, so tests can simulate an interrupt there. */
+/* Defined in tests/stubs/stubs.c. The hook is called at the start of
+ * irq_save, before the caller touches any shared state, so tests can simulate
+ * an interrupt there. The depth counts open irq_save sections. */
 extern void (*stub_irq_hook)(void);
+extern int stub_irq_depth;
 
 static inline uint32_t irq_save(void)
 {
 	if (stub_irq_hook)
 		stub_irq_hook();
+	stub_irq_depth++;
 	return 0;
 }
 
 static inline void irq_restore(uint32_t s)
 {
 	(void)s;
+	stub_irq_depth--;
 }
 
 #else

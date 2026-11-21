@@ -52,10 +52,16 @@ enum ump_tx_class { UMP_TX_CONTROL, UMP_TX_NOTE, UMP_TX_PRESSURE };
 #define UMP_TX_CONTROL_WORDS 192
 #define UMP_TX_NOTE_WORDS 256
 #define UMP_TX_PRESSURE_SLOTS 64
+/* Control-ring words that app traffic (system messages, SysEx) leaves free for
+ * UMP Stream replies: a full Endpoint Discovery reply is at most 28 words. */
+#define UMP_TX_CONTROL_STREAM_HEADROOM 32
 
 void ump_tx_reset(void);
 /* 0 on success, -1 if full (all-or-nothing). UMP_TX_PRESSURE is not allowed here. */
 int ump_tx_push(enum ump_tx_class cls, const uint32_t *msg, uint8_t words);
+/* App traffic into the control ring: as ump_tx_push(UMP_TX_CONTROL, ...) but
+ * succeeds only if free control words >= words + UMP_TX_CONTROL_STREAM_HEADROOM. */
+int ump_tx_push_control_app(const uint32_t *msg, uint8_t words);
 /* Accepts only if free note words >= words + reserve + 2; then reserve += 2.
  * The reserve is counted in 2-word units per outstanding attack and is not keyed per note:
  * callers must send a release only for an accepted attack. */
@@ -63,8 +69,9 @@ int ump_tx_push_attack(const uint32_t *msg, uint8_t words);
 /* Release is 1 or 2 words. Succeeds while reserve >= 2 (reserve -= 2 whatever its size); drops pending pressure for the key. */
 int ump_tx_push_release(const uint32_t *msg, uint8_t words);
 /* SysEx7 straight into the control ring: data is a whole F0..F7 message
- * (packed as ump_sysex7_pack does). 0, or -1 with nothing queued if it doesn't
- * fit or data isn't F0..F7. */
+ * (packed as ump_sysex7_pack does). App traffic: it leaves the stream-reply
+ * headroom free. 0, or -1 with nothing queued if it doesn't fit or data isn't
+ * F0..F7. */
 int ump_tx_push_sysex7(uint8_t group, const uint8_t *data, uint16_t len);
 /* Drops every pending pressure slot of the group (nothing else). */
 void ump_tx_drop_group_pressure(uint8_t group);

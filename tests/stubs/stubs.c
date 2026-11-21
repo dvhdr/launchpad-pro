@@ -3,6 +3,7 @@
 #include <string.h>
 
 void (*stub_irq_hook)(void) = 0;
+int stub_irq_depth;
 
 #include "platform/platform.h"
 
@@ -82,7 +83,7 @@ struct cx_fifo1k {
 	uint32_t a, b;
 	uint8_t buf[1024];
 };
-cx_fifo1k MIDIToHst;
+cx_fifo1k MIDIToHst, MIDIDinOut;
 uint8_t DinRx[24], USBParserToDev[24];
 uint16_t ADC_Max[64];
 
@@ -94,9 +95,21 @@ void stub_rx_packet(const uint8_t *p, uint16_t n)
 	stub.rx_len = n;
 }
 
+void stub_din_out_queue(uint16_t n)
+{
+	MIDIDinOut.a += n;
+}
+
+void stub_din_out_drain(void)
+{
+	MIDIDinOut.b = MIDIDinOut.a;
+}
+
 static void stub_usb_reset(void)
 {
 	memset(&stub, 0, sizeof stub);
+	memset(&MIDIDinOut, 0, sizeof MIDIDinOut);
+	stub_irq_depth = 0;
 }
 
 void SetEPType(uint8_t ep, uint16_t type)
@@ -253,6 +266,11 @@ void fifo1k_flush(cx_fifo1k *f)
 	f->b = f->a;
 }
 
+uint8_t fifo1k_unempty(cx_fifo1k *f)
+{
+	return ((f->a ^ f->b) & 0x3FF) != 0;
+}
+
 uint8_t fifo_unempty(cx_fifo *f)
 {
 	return f->head != f->tail;
@@ -287,6 +305,7 @@ void __real_midi_parsers_poll(void)
 void __real_usbmidi_poll(void)
 {
 	stub.real_usbmidi_poll_calls++;
+	stub.real_usbmidi_poll_irq_depth = stub_irq_depth;
 }
 
 void __real_midi_flush_windows_buffer(void)

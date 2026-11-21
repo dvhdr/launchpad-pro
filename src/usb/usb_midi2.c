@@ -244,9 +244,12 @@ void __wrap_midi_parsers_poll(void)
 	}
 	if (!rx_paused)
 		ump_rx_poll();
-	/* re-arm EP1 OUT once the ring has room for a whole 64-byte packet */
+	/* re-arm EP1 OUT once the ring has room for a whole 64-byte packet and,
+	 * as c_midi's midi_parsers_poll does in alt 0, the DIN Out fifo has
+	 * drained: that paces the host to the DIN wire rate */
 	s = irq_save();
-	if (alt && !pending_service && GetEPRxStatus(1) == EP_RX_NAK && ump_rx_free_words() >= 16)
+	if (alt && !pending_service && GetEPRxStatus(1) == EP_RX_NAK && ump_rx_free_words() >= 16 &&
+	    !fifo1k_unempty(&MIDIDinOut))
 		SetEPRxValid(1);
 	irq_restore(s);
 	midi_parse_rx_byte_stream(&MIDIDinIn, DinRx, DINMIDI);
@@ -259,7 +262,15 @@ void __wrap_usbmidi_poll(void)
 
 	usb_midi2_service();
 	if (!alt) {
-		__real_usbmidi_poll();
+		/* c_midi checks EP1 TX status, then writes and arms it: atomic with
+		 * respect to set_alt (SET_INTERFACE), which NAKs EP1. Bounded: one
+		 * 64-byte packet of MIDIToHst pops, or once after SET_CONFIGURATION
+		 * (main.o's trigger_USB_tx_flush) a drain of at most 1 KB
+		 * (estimated < 0.5 ms); masked interrupts stay pending. */
+		s = irq_save();
+		if (!alt)
+			__real_usbmidi_poll();
+		irq_restore(s);
 		return;
 	}
 	/* atomic with respect to set_alt, which NAKs EP1 and resets the queue */
@@ -297,7 +308,7 @@ void __wrap_hal_send_midi(uint8_t port, uint8_t status, uint8_t d1, uint8_t d2)
 	if (!words)
 		return;					/* SysEx bytes, invalid status */
 	if (status >= 0xF0)
-		ump_tx_push(UMP_TX_CONTROL, m, words);
+		ump_tx_push_control_app(m, words);	/* leaves room for stream replies */
 	else if (kind == 0x9 && (d2 & 0x7F))
 		send_attack(port, status & 0xF, d1, m, words);
 	else if (kind == 0x8 || kind == 0x9)
@@ -312,5 +323,5 @@ void __wrap_hal_send_sysex(uint8_t port, const uint8_t *data, uint16_t len)
 		__real_hal_send_sysex(port, data, len);
 		return;
 	}
-	ump_tx_push_sysex7(port, data, len);		/* all or nothing */
+	ump_tx_push_sysex7(port, data, len);		/* all or nothing, keeps the headroom */
 }

@@ -87,7 +87,8 @@ int ump_tx_push_sysex7(uint8_t group, const uint8_t *data, uint16_t len)
 	if (len >= 2 && data[0] == 0xF0 && data[len - 1] == 0xF7) {
 		uint16_t payload = (uint16_t)(len - 2);
 		uint16_t packets = payload ? (uint16_t)((payload + 5) / 6) : 1;
-		if ((uint32_t)g_ctl.size - g_ctl.count >= 2u * packets) {
+		if ((uint32_t)g_ctl.size - g_ctl.count >=
+		    2u * packets + UMP_TX_CONTROL_STREAM_HEADROOM) {
 			for (uint16_t p = 0; p < packets; p++) {
 				uint32_t w[2];
 				ump_sysex7_packet(w, group, data + 1, payload, p, packets);
@@ -113,6 +114,19 @@ int ump_tx_push(enum ump_tx_class cls, const uint32_t *msg, uint8_t words)
 			ring_put(&g_note, msg, words);
 			rc = 0;
 		}
+	}
+	irq_restore(s);
+	return rc;
+}
+
+int ump_tx_push_control_app(const uint32_t *msg, uint8_t words)
+{
+	int rc = -1;
+	uint32_t s = irq_save();
+	if (msgs_valid(msg, words) &&
+	    g_ctl.size - g_ctl.count >= words + UMP_TX_CONTROL_STREAM_HEADROOM) {
+		ring_put(&g_ctl, msg, words);
+		rc = 0;
 	}
 	irq_restore(s);
 	return rc;

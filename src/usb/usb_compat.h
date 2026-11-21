@@ -114,8 +114,7 @@ typedef char usb_compat_user_requests_size[sizeof(USER_STANDARD_REQUESTS) == 36 
 
 /* standard requests and descriptor types used here */
 #define USB_REQ_GET_DESCRIPTOR 0x06
-#define USB_RECIPIENT_MASK 0x7F		/* type and recipient bits */
-#define USB_STD_INTERFACE 0x01
+#define USB_STD_INTERFACE_IN 0x81	/* bmRequestType: IN, standard, interface */
 
 extern DEVICE_INFO *pInformation;
 extern DEVICE_INFO Device_Info;

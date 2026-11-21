@@ -152,6 +152,28 @@ static void test_rearm_threshold(void)
 	CHECK_EQ(stub.ep_rx_valid_calls, 1);
 }
 
+/* Alt 1 paces the host to the DIN wire rate as c_midi does in alt 0: EP1 OUT
+ * is re-armed only once the DIN Out fifo has drained. */
+static void test_rearm_waits_for_din_out(void)
+{
+	static const uint32_t w[1] = {0x21903C40};		/* group 1 → DIN */
+	enter_alt1();
+	host_out(w, 1);
+	CHECK_EQ(stub.ep_rx_status[1], EP_RX_NAK);
+	stub_din_out_queue(3);					/* 3 bytes queued for DIN Out */
+	__wrap_midi_parsers_poll();
+	CHECK_EQ(stub_midi_n, 1);				/* RX still dispatched */
+	CHECK_EQ(stub.ep_rx_valid_calls, 0);
+	CHECK_EQ(stub.ep_rx_status[1], EP_RX_NAK);
+	CHECK_EQ(stub.din_parse_calls, 1);			/* DIN In still parsed */
+	__wrap_midi_parsers_poll();
+	CHECK_EQ(stub.ep_rx_valid_calls, 0);
+	stub_din_out_drain();					/* DIN Out drained */
+	__wrap_midi_parsers_poll();
+	CHECK_EQ(stub.ep_rx_valid_calls, 1);
+	CHECK_EQ(stub.ep_rx_status[1], EP_RX_VALID);
+}
+
 static void test_din_parsed_in_both_alts(void)
 {
 	stubs_reset(); usb_midi2_usb_reset(); __wrap_midi_parsers_poll();
@@ -169,6 +191,19 @@ static void test_legacy_paths_gated_in_alt1(void)
 	CHECK_EQ(stub.real_usbmidi_poll_calls, 0); CHECK_EQ(stub.real_flush_calls, 0);
 	enter_alt0(); __wrap_usbmidi_poll(); __wrap_midi_flush_windows_buffer();
 	CHECK_EQ(stub.real_usbmidi_poll_calls, 1); CHECK_EQ(stub.real_flush_calls, 1);
+}
+
+/* Alt 0: c_midi's usbmidi_poll checks EP1 TX status and then arms it, so it
+ * runs with interrupts off (a SET_INTERFACE in between must not let one legacy
+ * packet out after set_alt NAKed EP1). */
+static void test_alt0_usbmidi_poll_atomic(void)
+{
+	enter_alt0();
+	stub.real_usbmidi_poll_irq_depth = -1;
+	__wrap_usbmidi_poll();
+	CHECK_EQ(stub.real_usbmidi_poll_calls, 1);
+	CHECK(stub.real_usbmidi_poll_irq_depth > 0);
+	CHECK_EQ(stub_irq_depth, 0);				/* balanced */
 }
 
 static void test_alt1_entry_runs_service_first(void)
@@ -537,6 +572,54 @@ static void test_hal_send_sysex_alt1(void)
 	CHECK_EQ(stub.real_sysex_port, USBSTANDALONE);
 }
 
+/* A host that isn't reading EP1 IN yet: 20 ms clock fills the control ring,
+ * but a full Endpoint Discovery request still gets all of its replies. */
+static void test_stream_replies_survive_clock_flood(void)
+{
+	static const uint32_t disc[4] = {0xF0000101u, 0x0000001Fu, 0, 0};
+	static const uint32_t fbdisc[4] = {0xF010FF03u, 0, 0, 0};
+	static const uint8_t sx[3] = {0xF0, 0x01, 0xF7};
+	static uint32_t got[256];
+	uint32_t w[16];
+	uint16_t n = 0, k, clocks = 0, replies = 0;
+	int i;
+
+	enter_alt1();
+	for (i = 0; i < 300; i++)				/* until well past refused */
+		__wrap_hal_send_midi(USBSTANDALONE, 0xF8, 0, 0);
+	__wrap_hal_send_sysex(USBSTANDALONE, sx, 3);		/* app SysEx: no room */
+	host_out(disc, 4);
+	__wrap_midi_parsers_poll();
+	while ((k = host_in(w)) > 0 && n + k <= 256) {
+		memcpy(got + n, w, 4u * k);
+		n = (uint16_t)(n + k);
+	}
+	while (clocks < n && got[clocks] == 0x10F80000u)
+		clocks++;
+	CHECK_EQ(clocks, UMP_TX_CONTROL_WORDS - UMP_TX_CONTROL_STREAM_HEADROOM);
+	for (k = clocks; k + 4 <= n; k += 4)
+		if ((got[k] >> 28) == 0xF)
+			replies++;
+	CHECK_EQ(replies, 6);					/* info, identity, name x2, id, config */
+	CHECK_EQ(n, clocks + 24);
+	CHECK_EQ(got[clocks], 0xF0010101u);
+	CHECK_EQ(got[n - 4], 0xF0060200u);
+
+	/* the same with Function Block discovery (all FBs, info and name) */
+	enter_alt1();
+	for (i = 0; i < 300; i++)
+		__wrap_hal_send_midi(USBMIDI, 0xF8, 0, 0);
+	host_out(fbdisc, 4);
+	__wrap_midi_parsers_poll();
+	n = 0;
+	while ((k = host_in(w)) > 0 && n + k <= 256) {
+		memcpy(got + n, w, 4u * k);
+		n = (uint16_t)(n + k);
+	}
+	CHECK_EQ(n, UMP_TX_CONTROL_WORDS - UMP_TX_CONTROL_STREAM_HEADROOM + 20);
+	CHECK_EQ(got[n - 20], 0xF0118033u);
+}
+
 static void test_hal_send_does_not_run_service(void)
 {
 	static const uint8_t sx[3] = {0xF0, 0x01, 0xF7};
@@ -603,8 +686,10 @@ void test_usb_data_all(void)
 	RUN(test_ep1_out_leaves_nak_until_poll);
 	RUN(test_backpressure_nak_until_space);
 	RUN(test_rearm_threshold);
+	RUN(test_rearm_waits_for_din_out);
 	RUN(test_din_parsed_in_both_alts);
 	RUN(test_legacy_paths_gated_in_alt1);
+	RUN(test_alt0_usbmidi_poll_atomic);
 	RUN(test_alt1_entry_runs_service_first);
 	RUN(test_usbmidi_poll_tx_conditions);
 	RUN(test_note_on2_paths);
@@ -618,6 +703,7 @@ void test_usb_data_all(void)
 	RUN(test_protocol_change_notify_survives_full_control_ring);
 	RUN(test_parsers_init_registers_hook);
 	RUN(test_hal_send_sysex_alt1);
+	RUN(test_stream_replies_survive_clock_flood);
 	RUN(test_hal_send_does_not_run_service);
 	RUN(test_alt_and_active);
 	RUN(test_sounding_vs_set_alt_interrupt);

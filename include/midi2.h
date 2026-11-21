@@ -30,6 +30,13 @@ void hal_send_note_off2(u8 port, u8 ch, u8 note, u16 velocity);
 void hal_send_poly_pressure2(u8 port, u8 ch, u8 note, u32 value);
 void hal_send_channel_pressure2(u8 port, u8 ch, u32 value);
 
+/* SysEx (hal_send_sysex to USBSTANDALONE or USBMIDI) on the alt 1 interface
+ * goes whole into the UMP control queue, which keeps 32 of its 192 words for
+ * UMP Stream replies: a message that doesn't fit in the free space (at most
+ * 160 words = 80 SysEx7 packets, 480 data bytes between F0 and F7, when the
+ * queue is empty) is dropped silently, with nothing sent. In alt 0 and on
+ * DINMIDI the library's hal_send_sysex is used unchanged. */
+
 /* Debug checkpoint only: while paused, received UMP is not dispatched to the
  * app (the RX ring fills and EP1 OUT stays NAK). */
 void midi2_debug_pause_rx(u8 paused);
