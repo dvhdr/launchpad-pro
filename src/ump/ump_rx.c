@@ -6,8 +6,14 @@ static uint32_t ring[UMP_RX_WORDS];
 static volatile uint16_t head; /* written by push (interrupt) */
 static volatile uint16_t tail; /* written by poll (main loop) */
 static volatile uint32_t overflows;
+/* Bumped by ump_rx_reset (may run in interrupt context); ump_rx_poll notices a
+ * change and discards its own state. Both are only written under irq_save. */
+static volatile uint16_t epoch;
 
-/* owned by ump_rx_poll */
+typedef char ump_rx_words_pow2[(UMP_RX_WORDS & (UMP_RX_WORDS - 1)) == 0 ? 1 : -1];
+
+/* Owned exclusively by ump_rx_poll; ump_rx_reset must never write these. */
+static uint16_t seen_epoch;
 static uint32_t msg[4];
 static uint8_t have;
 static uint8_t need;
@@ -19,10 +25,7 @@ void ump_rx_reset(void)
 	head = 0;
 	tail = 0;
 	overflows = 0;
-	have = 0;
-	need = 0;
-	ump_sysex7_rx_reset(&sysex[0]);
-	ump_sysex7_rx_reset(&sysex[1]);
+	epoch++;
 	irq_restore(s);
 }
 
@@ -89,12 +92,20 @@ void ump_rx_poll(void)
 		uint16_t t = tail;
 		uint16_t h = head;
 		uint32_t w = 0;
+		uint16_t ep = epoch;
 		int got = (h != t);
 		if (got) {
 			w = ring[t % UMP_RX_WORDS];
 			tail = (uint16_t)(t + 1);
 		}
 		irq_restore(s);
+		if (ep != seen_epoch) {
+			seen_epoch = ep;
+			have = 0;
+			need = 0;
+			ump_sysex7_rx_reset(&sysex[0]);
+			ump_sysex7_rx_reset(&sysex[1]);
+		}
 		if (!got)
 			return;
 

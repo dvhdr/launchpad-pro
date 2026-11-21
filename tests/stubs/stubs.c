@@ -19,6 +19,8 @@ void platform_product_instance_id(char out[25])
 
 struct stub_midi_ev stub_midi_log[64];
 int stub_midi_n;
+int stub_midi_total;
+struct stub_midi_ev stub_midi_last;
 uint8_t stub_sysex_buf[320];
 uint16_t stub_sysex_len;
 uint8_t stub_sysex_port;
@@ -27,6 +29,7 @@ int stub_sysex_calls;
 void stubs_reset(void)
 {
 	stub_midi_n = 0;
+	stub_midi_total = 0;
 	stub_sysex_len = 0;
 	stub_sysex_port = 0;
 	stub_sysex_calls = 0;
@@ -35,6 +38,11 @@ void stubs_reset(void)
 
 void app_midi_event(u8 port, u8 status, u8 d1, u8 d2)
 {
+	stub_midi_total++;
+	stub_midi_last.port = port;
+	stub_midi_last.status = status;
+	stub_midi_last.d1 = d1;
+	stub_midi_last.d2 = d2;
 	if (stub_midi_n < 64) {
 		stub_midi_log[stub_midi_n].port = port;
 		stub_midi_log[stub_midi_n].status = status;

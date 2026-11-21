@@ -94,16 +94,48 @@ static void test_rx_system_clock(void)
 static void test_rx_overflow(void)
 {
 	uint32_t w[UMP_RX_WORDS + 4];
-	for (int i = 0; i < UMP_RX_WORDS + 4; i++)
-		w[i] = 0x10F80000u;
+	for (int i = 0; i < UMP_RX_WORDS; i++)
+		w[i] = 0x20900000u | ((uint32_t)i << 8) | 0x7Fu; /* d1 = i */
+	for (int i = 0; i < 4; i++) /* would-be dropped: d1 = 100 + i */
+		w[UMP_RX_WORDS + i] = 0x20900000u | ((uint32_t)(100 + i) << 8) | 0x7Fu;
 	stubs_reset();
 	ump_rx_reset();
 	ump_rx_push_words(w, UMP_RX_WORDS + 4);
 	CHECK_EQ(ump_rx_free_words(), 0);
 	CHECK_EQ(ump_rx_overflows(), 4);
 	ump_rx_poll();
-	CHECK_EQ(stub_midi_n, 64); /* log capped; all words were consumed */
+	CHECK_EQ(stub_midi_total, UMP_RX_WORDS);
+	for (int i = 0; i < 64; i++)
+		CHECK_EQ(stub_midi_log[i].d1, i); /* oldest delivered in order */
+	CHECK_EQ(stub_midi_last.d1, UMP_RX_WORDS - 1); /* newest (100..103) dropped */
 	CHECK_EQ(ump_rx_free_words(), UMP_RX_WORDS);
+}
+
+static void test_rx_reset_mid_message_is_isr_safe(void)
+{
+	uint32_t a[] = {0x40903C00u, 0x30120102u}; /* MT4 first word; SysEx7 g0 start */
+	uint32_t b[] = {0x40903E00u, 0xFFFF0000u, 0x30020A0Bu, 0x0u};
+	/* a[0] is a partial MT4 (needs 2 words); a[1] would be its 2nd word, so
+	   feed the SysEx start in a way that is held: push SysEx start first. */
+	uint32_t sx[] = {0x30120102u, 0x00000000u};
+	stubs_reset();
+	ump_rx_reset();
+	ump_rx_push_words(sx, 2);
+	ump_rx_push_words(&a[0], 1);
+	ump_rx_poll();
+	CHECK_EQ(stub_midi_n, 0);
+	CHECK_EQ(stub_sysex_calls, 0);
+	ump_rx_reset();
+	ump_rx_push_words(b, 4);
+	ump_rx_poll();
+	CHECK_EQ(stub_midi_n, 1);
+	CHECK_EQ(stub_midi_log[0].d1, 62);
+	CHECK_EQ(stub_sysex_calls, 1);
+	{
+		const uint8_t e[] = {0xF0, 0x0A, 0x0B, 0xF7};
+		CHECK_EQ(stub_sysex_len, 4);
+		CHECK_MEM(stub_sysex_buf, e, 4);
+	}
 }
 
 void test_ump_rx_all(void)
@@ -114,4 +146,5 @@ void test_ump_rx_all(void)
 	RUN(test_rx_stream_routed);
 	RUN(test_rx_system_clock);
 	RUN(test_rx_overflow);
+	RUN(test_rx_reset_mid_message_is_isr_safe);
 }
