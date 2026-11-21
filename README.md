@@ -79,6 +79,17 @@ brew install gcc-arm-none-eabi
 make
 ```
 
+## Building from a plain checkout
+
+```
+git submodule update --init
+sudo apt-get install gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+make
+make test
+```
+
+`make` builds `build/launchpad_pro.syx` and checks that the image fits in the app flash region (101K). `make test` builds and runs the host unit tests.
+
 # Uploading to a Launchpad Pro
 Now you've got some nice new code to run! To upload it to your Launchpad Pro, you'll need a sysex tool for your host platform (I'd love to get it working from the virtual machine, but that's for later).  I recommend [Sysex Librarian](http://www.snoize.com/SysExLibrarian/) on macOS, and [MIDI OX](http://www.midiox.com/) on Windows.  On Linux, I'll bet you already have a tool in mind.
 

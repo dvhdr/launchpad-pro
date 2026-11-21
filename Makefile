@@ -16,9 +16,15 @@ ELF = $(BUILDDIR)/launchpad_pro.elf
 HEX = $(BUILDDIR)/launchpad_pro.hex
 HEXTOSYX = $(BUILDDIR)/hextosyx
 SIMULATOR = $(BUILDDIR)/simulator
+TEST_BIN = $(BUILDDIR)/tests/run_tests
+
+# host unit tests: later tasks append their files to TEST_SOURCES
+TEST_SOURCES += tests/run_tests.c tests/test_harness.c
+TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests
 
 # tools
-HOST_GPP = g++
+# -include cstdint fixes the pinned libintelhex header under modern g++
+HOST_GPP = g++ -include cstdint
 HOST_GCC = gcc
 CC = arm-none-eabi-gcc
 LD = arm-none-eabi-gcc
@@ -40,13 +46,16 @@ all: $(SYX)
 $(SYX): $(HEX) $(HEXTOSYX) $(SIMULATOR)
 	./$(SIMULATOR)
 	./$(HEXTOSYX) $(HEX) $(SYX)
+	$(TOOLS)/check_image.sh $(ELF)
 
 # build the tool for conversion of ELF files to sysex, ready for upload to the unit
-$(HEXTOSYX):
+$(HEXTOSYX): submodules
+	mkdir -p $(BUILDDIR)
 	$(HOST_GPP) -Ofast -std=c++0x -I./$(TOOLS)/libintelhex/include ./$(TOOLS)/libintelhex/src/intelhex.cc $(TOOLS)/hextosyx.cpp -o $(HEXTOSYX)
 
 # build the simulator (it's a very basic test of the code before it runs on the device!)
 $(SIMULATOR):
+	mkdir -p $(BUILDDIR)
 	$(HOST_GCC) -g3 -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c $(SOURCES) -o $(SIMULATOR)
 
 $(HEX): $(ELF)
@@ -62,6 +71,18 @@ DEPENDS := $(OBJECTS:.o=.d)
 $(BUILDDIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) -c $(CFLAGS) -MMD -o $@ $<
+
+submodules:
+	@test -f $(TOOLS)/libintelhex/include/intelhex.h || { echo "run: git submodule update --init"; exit 1; }
+
+test: $(TEST_BIN)
+	./$(TEST_BIN)
+
+$(TEST_BIN): $(TEST_SOURCES)
+	mkdir -p $(dir $@)
+	$(HOST_GCC) $(TEST_CFLAGS) $(TEST_SOURCES) -o $@
+
+.PHONY: all test submodules clean
 
 clean:
 	rm -rf $(BUILDDIR)

@@ -12,7 +12,7 @@ _Reserve_Stack_Value = 4;
 /* Specify the memory areas.  Set FLASH ORIGIN to 0x08000000 for debugging. */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08006400, LENGTH = 128K
+  FLASH (rx)      : ORIGIN = 0x08006400, LENGTH = 101K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 20K
   MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
 }
