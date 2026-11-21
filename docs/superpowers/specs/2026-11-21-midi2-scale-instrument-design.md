@@ -407,7 +407,19 @@ The player has the hardware and will test on Windows at the checkpoint.
    - whether Windows MIDI Services lists a MIDI 2.0 endpoint with the right
      name and two function blocks;
    - whether notes arrive cleanly through reconnects and mode changes;
-   - whether MIDI 1.0 fallback and both directions of DIN routing still work.
+   - whether MIDI 1.0 fallback and both directions of DIN routing still work;
+   - an EP1 capture across an alt 0 → 1 → 0 cycle while sending data into
+     DIN, confirming that:
+     - DIN input continues throughout;
+     - EP1 carries the expected framing in each mode (USB-MIDI 1.0 event
+       packets in alt 0, UMP words in alt 1);
+     - a full UMP receive queue keeps EP1 OUT NAKed until the UMP path has
+       space again;
+   - on one alt 1 connection, a Stream Configuration cycle of MIDI 2.0 →
+     MIDI 1.0 → MIDI 2.0, confirming that discovery replies and note traffic
+     continue in each protocol. (This path is different from compatibility
+     testing with an alt 0 host.)
+   Record the Windows build and the MIDI driver version with the results.
    If something fails, fix it here, or replace `c_midi.o`, before going on.
 2. **Instrument.** Scale engine, pad engine (both velocity modes, curves,
    pressure), menu, persistence, all host-tested.
