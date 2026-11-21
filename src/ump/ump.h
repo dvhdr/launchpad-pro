@@ -65,4 +65,18 @@ void ump_tx_push_pressure(uint8_t group, uint8_t ch, uint8_t note, const uint32_
 uint8_t ump_tx_fill_packet(uint8_t out[64]);
 uint16_t ump_tx_reserve_words(void);
 
+/* ---- stream section: UMP Stream (MT 0xF) responder ---- */
+
+#define UMP_PROTO_MIDI1 0x01
+#define UMP_PROTO_MIDI2 0x02
+
+/* Protocol = UMP_PROTO_MIDI2. Does not clear the protocol hook. */
+void ump_stream_reset(void);
+uint8_t ump_stream_protocol(void);
+/* Called with the old protocol just before the protocol changes. */
+void ump_stream_set_protocol_hook(void (*fn)(uint8_t old_proto));
+/* Handles one MT 0xF message, queuing replies (UMP_TX_CONTROL).
+ * Returns 1 if the protocol changed. */
+int ump_stream_handle(const uint32_t msg[4]);
+
 #endif
