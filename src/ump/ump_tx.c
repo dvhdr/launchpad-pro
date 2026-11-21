@@ -107,7 +107,7 @@ int ump_tx_push_release(const uint32_t *msg, uint8_t words)
 {
 	int rc = -1;
 	uint32_t s = irq_save();
-	if (msgs_valid(msg, words) && g_reserve >= words) {
+	if (msgs_valid(msg, words) && g_reserve >= 2 && words <= 2) {
 		/* pressure key: group (bits 27..24), channel (19..16), note (15..8) */
 		uint8_t group = (uint8_t)((msg[0] >> 24) & 0xF);
 		uint8_t ch = (uint8_t)((msg[0] >> 16) & 0xF);
@@ -117,7 +117,7 @@ int ump_tx_push_release(const uint32_t *msg, uint8_t words)
 			if (p->used && p->group == group && p->ch == ch && p->note == note)
 				p->used = 0;
 		}
-		g_reserve = (uint16_t)(g_reserve - words);
+		g_reserve = (uint16_t)(g_reserve - 2); /* 2-word unit per attack, whatever the release size */
 		ring_put(&g_note, msg, words); /* free >= reserve >= words, always fits */
 		rc = 0;
 	}

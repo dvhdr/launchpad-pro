@@ -52,9 +52,11 @@ enum ump_tx_class { UMP_TX_CONTROL, UMP_TX_NOTE, UMP_TX_PRESSURE };
 void ump_tx_reset(void);
 /* 0 on success, -1 if full (all-or-nothing). UMP_TX_PRESSURE is not allowed here. */
 int ump_tx_push(enum ump_tx_class cls, const uint32_t *msg, uint8_t words);
-/* Accepts only if free note words >= words + reserve + 2; then reserve += 2. */
+/* Accepts only if free note words >= words + reserve + 2; then reserve += 2.
+ * The reserve is counted in 2-word units per outstanding attack and is not keyed per note:
+ * callers must send a release only for an accepted attack. */
 int ump_tx_push_attack(const uint32_t *msg, uint8_t words);
-/* Succeeds while reserve >= words (reserve -= words); drops pending pressure for the key. */
+/* Release is 1 or 2 words. Succeeds while reserve >= 2 (reserve -= 2 whatever its size); drops pending pressure for the key. */
 int ump_tx_push_release(const uint32_t *msg, uint8_t words);
 /* note 0xFF = channel pressure. Coalesces by key; drops silently if no slot is free. */
 void ump_tx_push_pressure(uint8_t group, uint8_t ch, uint8_t note, const uint32_t msg[2]);

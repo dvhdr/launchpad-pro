@@ -97,11 +97,29 @@ static void test_tx_sysex_all_or_nothing(void)
 	ump_tx_reset();
 	ump_tx_push(UMP_TX_CONTROL, ctl, 4);
 	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, big, 200), -1);
-	CHECK_EQ(ump_tx_push(UMP_TX_PRESSURE, ctl, 2), -1);
+	{
+		uint32_t pr[2] = {0x40A03C00u, 1};
+		CHECK_EQ(ump_tx_push(UMP_TX_PRESSURE, pr, 2), -1);
+	}
 	CHECK_EQ(ump_tx_fill_packet(pkt), 16); /* only the first message is queued */
 	CHECK_EQ(ump_tx_fill_packet(pkt), 0);
 	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, big, 192), 0); /* exactly full fits */
 	CHECK_EQ(ump_tx_push(UMP_TX_CONTROL, ctl, 4), -1);
+}
+
+static void test_tx_midi1_notes_no_reserve_leak(void)
+{
+	uint32_t on = 0x20903C64u, off = 0x20803C00u;
+	uint8_t pkt[64];
+	ump_tx_reset();
+	for (int i = 0; i < 200; i++) {
+		CHECK_EQ(ump_tx_push_attack(&on, 1), 0);
+		CHECK_EQ(ump_tx_fill_packet(pkt), 4);
+		CHECK_EQ(ump_tx_push_release(&off, 1), 0);
+		CHECK_EQ(ump_tx_fill_packet(pkt), 4);
+	}
+	CHECK_EQ(ump_tx_reserve_words(), 0);
+	CHECK_EQ(ump_tx_push_attack(&on, 1), 0);
 }
 
 void test_ump_tx_all(void)
@@ -111,4 +129,5 @@ void test_ump_tx_all(void)
 	RUN(test_tx_saturated_release_always_fits);
 	RUN(test_tx_push_inside_fill);
 	RUN(test_tx_sysex_all_or_nothing);
+	RUN(test_tx_midi1_notes_no_reserve_leak);
 }
