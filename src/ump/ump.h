@@ -41,4 +41,26 @@ void ump_sysex7_rx_reset(struct ump_sysex7_rx *rx);
 /* 1 = complete (buf = F0..F7), 0 = in progress, -1 = discarded/error. */
 int ump_sysex7_rx_feed(struct ump_sysex7_rx *rx, const uint32_t msg[2]);
 
+/* ---- TX section: prioritised queue for USB EP1 IN ---- */
+
+enum ump_tx_class { UMP_TX_CONTROL, UMP_TX_NOTE, UMP_TX_PRESSURE };
+
+#define UMP_TX_CONTROL_WORDS 192
+#define UMP_TX_NOTE_WORDS 256
+#define UMP_TX_PRESSURE_SLOTS 64
+
+void ump_tx_reset(void);
+/* 0 on success, -1 if full (all-or-nothing). UMP_TX_PRESSURE is not allowed here. */
+int ump_tx_push(enum ump_tx_class cls, const uint32_t *msg, uint8_t words);
+/* Accepts only if free note words >= words + reserve + 2; then reserve += 2. */
+int ump_tx_push_attack(const uint32_t *msg, uint8_t words);
+/* Succeeds while reserve >= words (reserve -= words); drops pending pressure for the key. */
+int ump_tx_push_release(const uint32_t *msg, uint8_t words);
+/* note 0xFF = channel pressure. Coalesces by key; drops silently if no slot is free. */
+void ump_tx_push_pressure(uint8_t group, uint8_t ch, uint8_t note, const uint32_t msg[2]);
+/* Pops whole messages (control, then notes, then pressure) that fit in 64 bytes.
+ * Writes little-endian words; returns the byte count. */
+uint8_t ump_tx_fill_packet(uint8_t out[64]);
+uint16_t ump_tx_reserve_words(void);
+
 #endif
