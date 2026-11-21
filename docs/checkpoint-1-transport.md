@@ -13,7 +13,9 @@ repository.
 - Pad press: a MIDI 2.0 Note On on the Standalone port (UMP group 0), channel
   1, note number = pad index (pad 11 = note 11), with a 16-bit velocity scaled
   up from the 12-bit pad pressure peak. Pad release: Note Off.
-- The pad lights while held, brighter for harder hits.
+- The pad lights while held, brighter for harder hits. Pad pressure while
+  held is sent as Poly Pressure on the Standalone port (32-bit in the MIDI 2.0
+  Protocol).
 - The "MIDI" port (UMP group 1) is bridged to the DIN port in both directions.
   MIDI clock is sent on the Standalone port.
 - The Setup LED shows the USB state: green = MIDI 2.0 active, amber = UMP
@@ -21,6 +23,9 @@ repository.
   (plain USB MIDI 1.0).
 - Holding the Setup button pauses receiving of UMP from the host (for the
   backpressure test in section 6). Releasing it resumes.
+- The UMP Endpoint Name the firmware reports is "Launchpad Pro MIDI 2.0",
+  with no suffix. Only the USB product name (see Expected identity) gets the
+  " 16".
 
 ## Expected identity
 
@@ -70,6 +75,18 @@ but an interrupted upload leaves it in bootloader mode until you reflash.
 If the unit does not boot, or you want the factory firmware back: repeat the
 steps with `resources/Launchpad Pro-1.0.154.syx` from this repository.
 
+Recovery notes:
+
+- Always enter the bootloader by holding Setup while plugging in, as above.
+  Updater tools that reboot the unit into the bootloader with a SysEx command
+  do not work with this firmware while it runs the MIDI 2.0 setting (alt 1):
+  that SysEx no longer reaches the library. The Setup-held power-on method
+  always works, because the bootloader runs before the firmware.
+- If MIDI-OX cannot send the file to the bootloader through Windows MIDI
+  Services, switch the device to the legacy driver (Device Manager, as in
+  section 6 step 2) or use a Windows PC without Windows MIDI Services, and
+  send it from there.
+
 Result: flashed OK? (yes/no), notes.
 
 ## 2. Record the Windows build and driver version
@@ -88,7 +105,9 @@ Result: flashed OK? (yes/no), notes.
 Run `midi endpoint list` (check `midi --help` if the syntax differs).
 Expected, to verify:
 
-- an endpoint named "Launchpad Pro MIDI 2.0" (possibly with the device suffix);
+- an endpoint named "Launchpad Pro MIDI 2.0" (the UMP Endpoint Name has no
+  " 16" suffix; Windows may show the USB product name "Launchpad Pro MIDI 2.0
+  16" in other places, so record which name appears where);
 - native protocol MIDI 2.0;
 - two Function Blocks, "Standalone Port" and "MIDI Port".
 
@@ -105,7 +124,10 @@ several times each, releasing each time.
 Expected, to verify:
 
 - each hit gives a Note On with a 16-bit velocity (not only multiples of 512
-  as would come from 7-bit scaling), with soft hits low and hard hits high;
+  as would come from 7-bit scaling), with soft hits low and hard hits high.
+  The softest hit that triggers a note gives about 0x1500 (the pad trigger
+  threshold), not a value near 0. Below 0x8000 the values step by 16 (the pad
+  peak is 12 bits); above it the steps are 16 or 17;
 - each release gives a Note Off;
 - the pad lights, brighter for harder hits;
 - MIDI clock arrives on group 0 about every 20 ms.
@@ -113,27 +135,53 @@ Expected, to verify:
 Record the raw velocity range you saw (lowest and highest), and for each
 softness a typical value.
 
+Then check the "MIDI Port" (UMP group 1) bridge to DIN in this MIDI 2.0
+setting. Connect a DIN MIDI sound module or MIDI monitor to the DIN MIDI Out,
+and a DIN MIDI source to the DIN MIDI In.
+
+1. USB to DIN: send a Note On to group 1, channel 1, note 60, velocity 100,
+   then its Note Off, for example
+   `midi endpoint send-message 0x21903C64` and then
+   `midi endpoint send-message 0x21803C00` (same syntax notes as section 5).
+   Expected: the note sounds on (or shows in) the DIN device, then stops.
+   Group 1 is always MIDI 1.0 (MT 2), so these single words are right.
+2. DIN to USB: play a few notes on the DIN source. Expected: in the monitor
+   they appear as MIDI 1.0 Protocol (MT 2) messages on group 1, for example
+   `0x219nkkvv` for a Note On (n = channel - 1, kk = note, vv = velocity).
+
 ## 5. Stream Configuration cycle (one alt 1 connection)
 
 Without unplugging, on the same MIDI 2.0 connection, with the monitor running
 in a second window:
 
-1. Send the Stream Configuration Request `0xF0050100` (MIDI 1.0 Protocol).
-   For example `midi endpoint send-message 0xF0050100` (check
-   `midi endpoint --help`; the command may need the endpoint id, and the
-   message may need to be given as a word list).
-2. Expected: a reply `0xF0060100`, the Setup LED turns amber, and pad notes
-   arrive as MIDI 1.0 Protocol (MT 2) messages.
-3. Send `0xF0050200` (MIDI 2.0 Protocol).
-4. Expected: a reply `0xF0060200`, the Setup LED turns green, and pad notes
-   arrive as MIDI 2.0 Protocol (MT 4) messages with 16-bit velocity.
+A Stream message is four 32-bit words; send all four.
 
-Record the replies seen, the LED colours, and whether notes arrived in each
-protocol. Also say whether discovery replies (Endpoint, Function Block info)
-still work after each change, for example by running `midi endpoint list`
-again.
+1. Hold pad 11 down and keep holding it through step 2.
+2. Send the Stream Configuration Request for the MIDI 1.0 Protocol, the four
+   words `0xF0050100 0x00000000 0x00000000 0x00000000`. For example
+   `midi endpoint send-message 0xF0050100 0x00000000 0x00000000 0x00000000`
+   (check `midi endpoint --help`; the command may need the endpoint id, and
+   the words may need a different separator).
+3. Expected: first a MIDI 2.0 Protocol (MT 4) Note Off for note 11 (the held
+   pad, in the old protocol), then the reply `0xF0060100` (Stream
+   Configuration Notification). The Setup LED turns amber. Release pad 11:
+   a second Note Off for note 11, now as MIDI 1.0 Protocol (MT 2), is
+   expected and harmless. Pad notes now arrive as MIDI 1.0 Protocol (MT 2)
+   messages.
+4. Hold pad 11 again and send the request for the MIDI 2.0 Protocol,
+   `0xF0050200 0x00000000 0x00000000 0x00000000`.
+5. Expected: first a MIDI 1.0 Protocol (MT 2) Note Off for note 11, then the
+   reply `0xF0060200`. The Setup LED turns green. Release pad 11 (again a
+   second Note Off, now MT 4). Pad notes now arrive as MIDI 2.0 Protocol
+   (MT 4) messages with 16-bit velocity.
 
-## 6. EP1 capture across alt 0, alt 1, alt 0
+Poly Pressure messages for the held pad may appear in between; they are
+expected. Record the replies seen and their order relative to the Note Off,
+the LED colours, and whether notes arrived in each protocol. Also say whether
+discovery replies (Endpoint, Function Block info) still work after each
+change, for example by running `midi endpoint list` again.
+
+## 6. EP1 capture across alt 1, alt 0, alt 1
 
 Needs USBPcap and Wireshark. Also feed the MIDI In breakout (DIN) from a DIN
 MIDI source (keyboard or other controller) sending a steady stream, for
@@ -153,18 +201,30 @@ Confirm and record:
 - DIN input reaches the PC throughout, including across both switches;
 - the framing in alt 0 is 4-byte USB-MIDI event packets, and in alt 1 it is
   UMP 32-bit words (little-endian);
-- backpressure: with Setup held (receive paused) and the host flooding
-  messages (for example repeated `midi endpoint send-message`, or a MIDI
-  tool sending many notes to the endpoint), the OUT transfers on EP1 stall
-  (NAK) once the receive queue fills, and continue after Setup is released.
-  Describe what you saw in the capture (NAK or timeout, and how long).
+- backpressure, in alt 1: hold Setup (receive paused) and send a burst of
+  messages from the host (for example repeated `midi endpoint send-message`,
+  or a MIDI tool sending notes to the endpoint). The device NAKs EP1 OUT once
+  its receive queue fills. USBPcap does not show NAK handshakes; what you
+  should see is the last OUT URB staying pending (no completion) while Setup
+  is held, and the sending command blocking or timing out. Release Setup:
+  the pending URB completes and the rest follows. Describe what you saw (URB
+  pending, command blocked or timed out, and for how long). Keep the burst
+  short: flooding while paused can back up the shared Windows MIDI service
+  and delay other MIDI apps until Setup is released.
 
 Save the capture files (.pcapng).
 
 ## 7. MIDI 1.0 fallback
 
-On a PC without Windows MIDI Services (or with the service stopped, or a VM),
-connect the Launchpad. Expected to verify:
+Get the Launchpad onto alternate setting 0 (USB MIDI 1.0) in one of two ways:
+
+- on this PC, switch its driver to the in-box legacy USB Audio driver in
+  Device Manager, as in section 6 step 2; or
+- connect it to a Windows PC without Windows MIDI Services.
+
+Stopping the Windows MIDI Service is not enough: the USB MIDI 2.0 class
+driver still binds to the device and selects alt 1 (Setup LED green or
+amber). Check that the Setup LED is red before going on. Expected to verify:
 
 - two MIDI ports appear: "Standalone Port" and "MIDI Port" (names may be
   prefixed with the device name);
@@ -180,8 +240,10 @@ connect the Launchpad. Expected to verify:
 1. With the DIN source sending, the pads in use and the monitor running,
    unplug and replug USB three times. Record whether the endpoint comes back,
    whether notes still arrive, and the Setup LED colour after each.
+   Unplug and replug is the USB bus reset check.
 2. Also with traffic running, in Device Manager disable and enable the
-   Launchpad device (this resets the device on the bus). Record the same.
+   Launchpad device. Windows does not always reset the bus for this; it does
+   re-select the configuration and the alternate setting. Record the same.
 3. Record any hang, any stuck note, any missed note, any lasting red LED.
 
 ## 9. Results table
@@ -196,24 +258,26 @@ Fill in "Result" and "Notes". "Expected" is what I predict.
 | 2b | `midi --version` | 1.0.17-rc.4.25 | | |
 | 2c | Driver file and version | MIDI 2.0 class driver (stock was wdma_usb.inf 10.0.28000.3531) | | |
 | 2d | VID and PID | VID_1235 PID_4060 | | |
-| 3a | Endpoint name | Launchpad Pro MIDI 2.0 (suffix " 16") | | |
+| 3a | Endpoint name | Launchpad Pro MIDI 2.0 (no suffix; the USB product name is "... 16") | | |
 | 3b | Protocol | MIDI 2.0 | | |
 | 3c | Function Blocks | "Standalone Port" and "MIDI Port" | | |
 | 4a | Pad 11 Note On, 16-bit velocity | Soft low, hard high, many distinct values | | |
 | 4b | Raw velocity range seen | (record low and high) | | |
 | 4c | Pad 11 release gives Note Off | Yes | | |
 | 4d | Clock on group 0 | About every 20 ms | | |
-| 5a | Request `0xF0050100` reply | `0xF0060100`, LED amber, notes as MIDI 1.0 Protocol | | |
-| 5b | Request `0xF0050200` reply | `0xF0060200`, LED green, notes as MIDI 2.0 Protocol | | |
-| 6a | DIN input continues across alt 0, 1, 0 | Yes | | |
+| 4e | Alt 1: group 1 note to DIN Out | Sounds on the DIN device, then stops | | |
+| 4f | Alt 1: DIN In to USB | MT 2 messages on group 1 | | |
+| 5a | Request `0xF0050100` reply | MT 4 Note Off for held pad 11, then `0xF0060100`; LED amber; notes as MIDI 1.0 Protocol | | |
+| 5b | Request `0xF0050200` reply | MT 2 Note Off for held pad 11, then `0xF0060200`; LED green; notes as MIDI 2.0 Protocol | | |
+| 6a | DIN input continues across alt 1, 0, 1 | Yes | | |
 | 6b | Framing in alt 0 | 4-byte USB-MIDI event packets | | |
 | 6c | Framing in alt 1 | UMP 32-bit words | | |
-| 6d | Setup held plus flood | OUT stalls (NAK) until Setup released | | |
+| 6d | Setup held plus burst | Last OUT URB pending / sender blocks until Setup released | | |
 | 7a | Fallback: both ports visible | Yes, LED red | | |
 | 7b | Fallback: USB to DIN | Works | | |
 | 7c | Fallback: DIN to USB | Works | | |
 | 8a | Replug x3 during traffic | Recovers each time | | |
-| 8b | Disable and enable during traffic | Recovers | | |
+| 8b | Disable and enable during traffic (may not reset the bus) | Recovers | | |
 
 ## 10. What to send back
 
