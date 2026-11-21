@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 extern void (*stub_irq_hook)(void);
+/* irq_save nesting depth (host irq.h): > 0 while "interrupts are disabled" */
+extern int stub_irq_depth;
 
 struct stub_midi_ev {
 	uint8_t port, status, d1, d2;
@@ -51,6 +53,7 @@ struct stub_state {
 	int real_parsers_init_calls;
 	int real_parsers_poll_calls;
 	int real_usbmidi_poll_calls;
+	int real_usbmidi_poll_irq_depth;	/* stub_irq_depth at the last call */
 	int real_flush_calls;
 	int real_midi_calls;
 	uint8_t real_midi_last[4];	/* port, status, d1, d2 */
@@ -75,6 +78,9 @@ extern struct stub_state stub;
 #define STUB_PARSER_INIT_BYTE(i) ((uint8_t)(0xA0 + (i)))
 
 void stub_rx_packet(const uint8_t *p, uint16_t n);
+/* MIDIDinOut: n more bytes queued / everything sent */
+void stub_din_out_queue(uint16_t n);
+void stub_din_out_drain(void);
 void stubs_reset(void);
 
 #endif

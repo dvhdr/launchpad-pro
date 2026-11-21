@@ -17,6 +17,9 @@ LIB_WORK = $(BUILDDIR)/lib_trim
 
 OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES) $(FW_SOURCES))))
 
+# host simulator: the app plus stand-ins for the hal and midi2 API
+SIM_SOURCES = $(TOOLS)/simulator.c $(TOOLS)/sim_midi2.c $(SOURCES) src/ump/ump_codec.c
+
 # output files
 SYX = $(BUILDDIR)/launchpad_pro.syx
 ELF = $(BUILDDIR)/launchpad_pro.elf
@@ -33,6 +36,7 @@ TEST_SOURCES += tests/test_ump_stream.c src/ump/ump_stream.c
 TEST_SOURCES += tests/test_ump_rx.c src/ump/ump_rx.c
 TEST_SOURCES += tests/test_usb_desc.c src/usb/usb_desc.c
 TEST_SOURCES += tests/test_usb_prop.c src/usb/usb_prop.c src/usb/usb_midi2.c src/usb/usb_endp.c
+TEST_SOURCES += tests/test_usb_data.c
 GOLDEN_DESC = $(BUILDDIR)/tests/golden_usb_desc_rodata.bin
 TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests -DGOLDEN_DESC=\"$(GOLDEN_DESC)\"
 
@@ -70,9 +74,9 @@ $(HEXTOSYX): | submodules
 	$(HOST_GPP) -Ofast -std=c++0x -I./$(TOOLS)/libintelhex/include ./$(TOOLS)/libintelhex/src/intelhex.cc $(TOOLS)/hextosyx.cpp -o $(HEXTOSYX)
 
 # build the simulator (it's a very basic test of the code before it runs on the device!)
-$(SIMULATOR):
+$(SIMULATOR): $(SIM_SOURCES) $(wildcard include/*.h src/*/*.h)
 	mkdir -p $(BUILDDIR)
-	$(HOST_GCC) -g3 -O0 -std=c99 -Iinclude $(TOOLS)/simulator.c $(SOURCES) -o $(SIMULATOR)
+	$(HOST_GCC) -g3 -O0 -std=c99 -Iinclude -Isrc $(SIM_SOURCES) -o $(SIMULATOR)
 
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex $< $@

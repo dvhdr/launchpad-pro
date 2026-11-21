@@ -188,14 +188,14 @@ static uint8_t *Device_GetGtbDescriptor(uint16_t Length)
 /* Class_Data_Setup. usb_core.o sends here every GET_DESCRIPTOR that is not
  * standard device-recipient type 1/2/3, and every class request with a data
  * stage. Only the Group Terminal Block request is supported: GET_DESCRIPTOR,
- * standard/interface, wValue = 0x26 << 8 | alt 1, wIndex = interface 1. The
- * core truncates to wLength. */
+ * bmRequestType 0x81 exactly (IN, standard, interface), wValue = 0x26 << 8 |
+ * alt 1, wIndex = interface 1. The core truncates to wLength. */
 RESULT Device_Data_Setup(uint8_t RequestNo)
 {
 	DEVICE_INFO *p = pInformation;
 
 	if (RequestNo == USB_REQ_GET_DESCRIPTOR &&
-	    (p->USBbmRequestType & USB_RECIPIENT_MASK) == USB_STD_INTERFACE &&
+	    p->USBbmRequestType == USB_STD_INTERFACE_IN &&
 	    p->USBwValue1 == 0x26 && p->USBwValue0 == 1 &&
 	    p->USBwIndex1 == 0 && p->USBwIndex0 == 1) {
 		p->Ctrl_Info.CopyData = Device_GetGtbDescriptor;
