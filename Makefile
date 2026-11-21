@@ -4,11 +4,18 @@ TOOLS = tools
 
 SOURCES += src/app.c
 
-INCLUDES += -Iinclude -I
+# firmware-only sources (USB MIDI 2.0 transport); not part of the simulator
+FW_SOURCES += $(wildcard src/usb/*.c src/ump/*.c src/platform/*.c)
 
-LIB = lib/launchpad_pro.a
+INCLUDES += -Iinclude -Isrc -I
 
-OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES))))
+# the vendor archive minus the objects src/usb replaces; c_midi.o gets its
+# parser state (DinRx, USBParserToDev) made global for src/usb/usb_midi2.c
+ORIG_LIB = lib/launchpad_pro.a
+LIB = $(BUILDDIR)/launchpad_pro_trimmed.a
+LIB_WORK = $(BUILDDIR)/lib_trim
+
+OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES) $(FW_SOURCES))))
 
 # output files
 SYX = $(BUILDDIR)/launchpad_pro.syx
@@ -25,6 +32,7 @@ TEST_SOURCES += tests/test_ump_tx.c src/ump/ump_tx.c tests/stubs/stubs.c
 TEST_SOURCES += tests/test_ump_stream.c src/ump/ump_stream.c
 TEST_SOURCES += tests/test_ump_rx.c src/ump/ump_rx.c
 TEST_SOURCES += tests/test_usb_desc.c src/usb/usb_desc.c
+TEST_SOURCES += tests/test_usb_prop.c src/usb/usb_prop.c src/usb/usb_midi2.c src/usb/usb_endp.c
 GOLDEN_DESC = $(BUILDDIR)/tests/golden_usb_desc_rodata.bin
 TEST_CFLAGS = -std=c99 -Wall -Werror -DHOST_TEST -Iinclude -Isrc -Itests -DGOLDEN_DESC=\"$(GOLDEN_DESC)\"
 
@@ -35,6 +43,7 @@ HOST_GCC = gcc
 CC = arm-none-eabi-gcc
 LD = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
+AR = arm-none-eabi-ar
 
 CFLAGS  = -Os -Wall -I.\
 -D_STM32F103RBT6_  -D_STM3x_  -D_STM32x_ -mthumb -mcpu=cortex-m3 \
@@ -45,6 +54,7 @@ $(INCLUDES) -o
 LDSCRIPT = stm32_flash.ld
 
 LDFLAGS += -T$(LDSCRIPT) -u _start -u _Minimum_Stack_Size  -mcpu=cortex-m3 -mthumb -specs=nano.specs -specs=nosys.specs -nostdlib -Wl,-static -N -nostartfiles -Wl,--gc-sections
+LDFLAGS += -Wl,--wrap=hal_send_midi,--wrap=hal_send_sysex,--wrap=usbmidi_poll,--wrap=midi_flush_windows_buffer,--wrap=midi_parsers_poll,--wrap=midi_parsers_init
 
 all: $(SYX)
 
@@ -67,8 +77,18 @@ $(SIMULATOR):
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex $< $@
 
-$(ELF): $(OBJECTS)
+$(ELF): $(OBJECTS) $(LIB)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIB)
+
+$(LIB): $(ORIG_LIB)
+	rm -rf $(LIB_WORK)
+	mkdir -p $(LIB_WORK)
+	cp $(ORIG_LIB) $(LIB_WORK)/trimmed.a
+	$(AR) d $(LIB_WORK)/trimmed.a usb_desc.o usb_prop.o usb_endp.o
+	cd $(LIB_WORK) && $(AR) x $(CURDIR)/$(ORIG_LIB) c_midi.o
+	$(OBJCOPY) --globalize-symbol=DinRx --globalize-symbol=USBParserToDev $(LIB_WORK)/c_midi.o
+	$(AR) r $(LIB_WORK)/trimmed.a $(LIB_WORK)/c_midi.o
+	mv $(LIB_WORK)/trimmed.a $@
 
 DEPENDS := $(OBJECTS:.o=.d)
 

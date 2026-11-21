@@ -15,6 +15,12 @@
 #define USB_STR_PORT_STANDALONE 4
 #define USB_STR_PORT_MIDI 5
 
+/* device descriptor bytes; usb_prop.c also keeps a writable copy
+ * (DeviceDescriptor) because device_setuppid patches idProduct in RAM */
+#define USB_DEVICE_DESC_BYTES \
+	0x12, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x08, \
+	0x35, 0x12, 0x51, 0x40, 0x00, 0x03, 0x01, 0x02, 0x03, 0x01
+
 extern const uint8_t usb_device_desc[18];
 extern const uint8_t usb_config_desc_bus[USB_CONFIG_DESC_LEN];  /* bMaxPower 0xFA */
 extern const uint8_t usb_config_desc_psu[USB_CONFIG_DESC_LEN];  /* bMaxPower 0x01 */
