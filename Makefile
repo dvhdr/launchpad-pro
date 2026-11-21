@@ -49,7 +49,7 @@ $(SYX): $(HEX) $(HEXTOSYX) $(SIMULATOR)
 	$(TOOLS)/check_image.sh $(ELF)
 
 # build the tool for conversion of ELF files to sysex, ready for upload to the unit
-$(HEXTOSYX): submodules
+$(HEXTOSYX): | submodules
 	mkdir -p $(BUILDDIR)
 	$(HOST_GPP) -Ofast -std=c++0x -I./$(TOOLS)/libintelhex/include ./$(TOOLS)/libintelhex/src/intelhex.cc $(TOOLS)/hextosyx.cpp -o $(HEXTOSYX)
 
@@ -78,11 +78,12 @@ submodules:
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
-$(TEST_BIN): $(TEST_SOURCES)
+$(TEST_BIN): $(TEST_SOURCES) $(wildcard tests/*.h tests/stubs/*.h include/*.h src/*/*.h)
 	mkdir -p $(dir $@)
 	$(HOST_GCC) $(TEST_CFLAGS) $(TEST_SOURCES) -o $@
 
 .PHONY: all test submodules clean
+.DELETE_ON_ERROR:
 
 clean:
 	rm -rf $(BUILDDIR)
