@@ -198,27 +198,29 @@ static void test_tx_sysex7_all_or_nothing_ring(void)
 	}
 }
 
-static void test_tx_reset_notes_keeps_control(void)
+static void test_tx_drop_group_pressure(void)
 {
-	uint32_t ctl[4] = {0xF0010101u, 0x82000300u, 0, 0}, on[2] = {0x40903C00u, 0xFFFF0000u};
-	uint32_t pr[2] = {0x40A03C00u, 5};
+	uint32_t p0[2] = {0x40A03C00u, 1}, p1[2] = {0x41A03C00u, 2}, p2[2] = {0x40D10000u, 3};
 	uint32_t got[16];
 	ump_tx_reset();
-	ump_tx_push(UMP_TX_CONTROL, ctl, 4);
-	CHECK_EQ(ump_tx_push_attack(on, 2), 0);
-	ump_tx_push_pressure(0, 0, 60, pr);
-	ump_tx_reset_notes();
-	CHECK_EQ(ump_tx_reserve_words(), 0);
-	CHECK_EQ(drain_words(got, 16), 4);
-	CHECK_EQ(got[0], ctl[0]);
-	CHECK(ump_tx_push_release(on, 2) == -1);	/* reserve gone */
+	ump_tx_push_pressure(0, 0, 60, p0);
+	ump_tx_push_pressure(1, 0, 60, p1);
+	ump_tx_push_pressure(0, 1, 0xFF, p2);
+	ump_tx_drop_group_pressure(0);
+	CHECK_EQ(drain_words(got, 16), 2);
+	CHECK_EQ(got[0], p1[0]);
+	CHECK_EQ(got[1], p1[1]);
+	ump_tx_push_pressure(0, 0, 60, p0);			/* slots are free again */
+	ump_tx_drop_group_pressure(1);
+	CHECK_EQ(drain_words(got, 16), 2);
+	CHECK_EQ(got[0], p0[0]);
 }
 
 void test_ump_tx_all(void)
 {
 	RUN(test_tx_sysex7_matches_pack);
 	RUN(test_tx_sysex7_all_or_nothing_ring);
-	RUN(test_tx_reset_notes_keeps_control);
+	RUN(test_tx_drop_group_pressure);
 	RUN(test_tx_priority_and_le);
 	RUN(test_tx_pressure_coalesce_and_stale);
 	RUN(test_tx_saturated_release_always_fits);

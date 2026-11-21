@@ -66,9 +66,8 @@ int ump_tx_push_release(const uint32_t *msg, uint8_t words);
  * (packed as ump_sysex7_pack does). 0, or -1 with nothing queued if it doesn't
  * fit or data isn't F0..F7. */
 int ump_tx_push_sysex7(uint8_t group, const uint8_t *data, uint16_t len);
-/* Drops the queued note-ring messages and pending pressure and zeroes the
- * release reserve; the control ring is kept. */
-void ump_tx_reset_notes(void);
+/* Drops every pending pressure slot of the group (nothing else). */
+void ump_tx_drop_group_pressure(uint8_t group);
 /* note 0xFF = channel pressure. Coalesces by key; drops silently if no slot is free. */
 void ump_tx_push_pressure(uint8_t group, uint8_t ch, uint8_t note, const uint32_t msg[2]);
 /* Pops whole messages (control, then notes, then pressure) that fit in 64 bytes.

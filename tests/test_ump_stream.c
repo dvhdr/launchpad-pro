@@ -149,6 +149,33 @@ static void test_stream_config_cycle(void)
 	ump_stream_reset();
 }
 
+/* A protocol change's notification goes behind queued note traffic (note
+ * FIFO); a no-change notification stays in the control ring. */
+static void test_stream_config_notify_ordering(void)
+{
+	uint32_t to1[4] = {0xF0050100u, 0, 0, 0}, to2[4] = {0xF0050200u, 0, 0, 0};
+	uint32_t note[2] = {0x40903C00u, 0x80000000u};
+	ump_stream_set_protocol_hook(0);
+	ump_stream_reset(); fake_tx_clear();
+	CHECK_EQ(ump_tx_push(UMP_TX_NOTE, note, 2), 0);
+	CHECK_EQ(ump_stream_handle(to2), 0);                      /* no change: control */
+	CHECK_EQ(fake_tx_msg_count(), 2);
+	CHECK_EQ(fake_tx_word(0,0), 0xF0060200u); CHECK_EQ(fake_tx_word(1,0), note[0]);
+	fake_tx_clear();
+	CHECK_EQ(ump_tx_push(UMP_TX_NOTE, note, 2), 0);
+	CHECK_EQ(ump_stream_handle(to1), 1);                      /* change: after the note */
+	CHECK_EQ(fake_tx_msg_count(), 2);
+	CHECK_EQ(fake_tx_word(0,0), note[0]); CHECK_EQ(fake_tx_word(1,0), 0xF0060100u);
+	/* note FIFO full: the notification falls back to the control ring */
+	fake_tx_clear();
+	while (ump_tx_push(UMP_TX_NOTE, note, 2) == 0)
+		;
+	CHECK_EQ(ump_stream_handle(to2), 1);
+	CHECK_EQ(fake_tx_word(0,0), 0xF0060200u);
+	fake_tx_clear();
+	ump_stream_reset();
+}
+
 static void test_unknown_status(void)
 {
 	uint32_t req[4] = {0xF0770000u, 0, 0, 0};
@@ -164,5 +191,6 @@ void test_ump_stream_all(void)
 	RUN(test_fb_discovery);
 	RUN(test_fb_name_round_trip);
 	RUN(test_stream_config_cycle);
+	RUN(test_stream_config_notify_ordering);
 	RUN(test_unknown_status);
 }

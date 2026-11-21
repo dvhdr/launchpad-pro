@@ -120,9 +120,10 @@ void midi2_protocol_changing(uint8_t old_proto)
 	uint32_t s = irq_save();
 	uint8_t ch, i, b;
 
-	/* queued note traffic is in the old protocol and the reserve belongs to
-	 * the table being cleared; Stream replies already queued are kept */
-	ump_tx_reset_notes();
+	/* Nothing queued is dropped: each still-sounding Standalone note gets a
+	 * Note Off in the old protocol behind the note traffic already queued
+	 * (its reserve guarantees the room), and ump_stream then queues the
+	 * Configuration Notification behind those. Group 1 is not affected. */
 	for (ch = 0; ch < 16; ch++) {
 		for (i = 0; i < 16; i++) {
 			uint8_t bits = sounding[0][ch][i];
@@ -136,14 +137,14 @@ void midi2_protocol_changing(uint8_t old_proto)
 					words = ump_m2_note_off(m, 0, ch, note, 0);
 				else
 					words = ump_from_midi1(m, 0, (uint8_t)(0x80 | ch), note, 0, 0);
-				/* control ring: ahead of the Configuration Notification
-				 * that ump_stream queues after this hook returns */
-				if (ump_tx_push(UMP_TX_CONTROL, m, words) != 0)
-					ump_tx_push(UMP_TX_NOTE, m, words);
+				if (ump_tx_push_release(m, words) != 0)
+					ump_tx_push(UMP_TX_NOTE, m, words);	/* not reached */
 			}
+			sounding[0][ch][i] = 0;
 		}
 	}
-	memset(sounding, 0, sizeof sounding);
+	/* pending pressure is in the old protocol */
+	ump_tx_drop_group_pressure(0);
 	irq_restore(s);
 }
 
@@ -176,7 +177,7 @@ void hal_send_note_on2(u8 port, u8 ch, u8 note, u16 velocity)
 {
 	if (standalone_midi2(port)) {
 		uint32_t m[2];
-		ump_m2_note_on(m, 0, ch, note, velocity);
+		ump_m2_note_on(m, 0, ch, note & 0x7F, velocity);
 		send_attack(0, ch, note, m, 2);
 	} else {
 		uint8_t v = (uint8_t)ump_scale_down(velocity, 16, 7);
@@ -188,7 +189,7 @@ void hal_send_note_off2(u8 port, u8 ch, u8 note, u16 velocity)
 {
 	if (standalone_midi2(port)) {
 		uint32_t m[2];
-		ump_m2_note_off(m, 0, ch, note, velocity);
+		ump_m2_note_off(m, 0, ch, note & 0x7F, velocity);
 		send_release(0, ch, note, m, 2);
 	} else {
 		__wrap_hal_send_midi(port, (uint8_t)(0x80 | (ch & 0xF)), note & 0x7F,
@@ -200,7 +201,7 @@ void hal_send_poly_pressure2(u8 port, u8 ch, u8 note, u32 value)
 {
 	if (standalone_midi2(port)) {
 		uint32_t m[2];
-		ump_m2_poly_pressure(m, 0, ch, note, (uint32_t)value);
+		ump_m2_poly_pressure(m, 0, ch, note & 0x7F, (uint32_t)value);
 		ump_tx_push_pressure(0, ch & 0xF, note & 0x7F, m);
 	} else {
 		__wrap_hal_send_midi(port, (uint8_t)(0xA0 | (ch & 0xF)), note & 0x7F,

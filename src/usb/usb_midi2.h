@@ -26,8 +26,9 @@ uint8_t usb_midi2_iface_alt(uint8_t iface);
 void usb_midi2_service(void);
 
 /* ump_stream protocol hook (registered by __wrap_midi_parsers_init): queues a
- * Note Off in old_proto for every note sounding on the Standalone group, ahead
- * of the Stream Configuration Notification, and drops stale note traffic. */
+ * Note Off in old_proto for every note sounding on the Standalone group, in
+ * the note FIFO after the traffic already queued (the Stream Configuration
+ * Notification follows), and drops the group's pending pressure. */
 void midi2_protocol_changing(uint8_t old_proto);
 
 #endif

@@ -71,13 +71,12 @@ void ump_tx_reset(void)
 	irq_restore(s);
 }
 
-void ump_tx_reset_notes(void)
+void ump_tx_drop_group_pressure(uint8_t group)
 {
 	uint32_t s = irq_save();
-	g_note.head = g_note.count = 0;
-	g_reserve = 0;
 	for (int i = 0; i < UMP_TX_PRESSURE_SLOTS; i++)
-		g_pressure[i].used = 0;
+		if (g_pressure[i].group == group)
+			g_pressure[i].used = 0;
 	irq_restore(s);
 }
 

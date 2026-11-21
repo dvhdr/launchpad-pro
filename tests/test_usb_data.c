@@ -367,25 +367,32 @@ static void test_protocol_change_releases_notes(void)
 	static const uint32_t to_midi2[4] = {0xF0050200u, 0, 0, 0};
 	uint32_t w[16];
 
-	/* alt 1 MIDI 2; note_on2 ch0 60; stream-config request to MIDI 1 via RX;
-	   poll → first TX packet contains MIDI 2.0 Note Off 0x40803C00 before 0xF0060100 */
+	/* alt 1 MIDI 2: note 60 sent; note 62 on + off still queued; Stream
+	   Config request to MIDI 1 via RX → on the wire, in order: the queued
+	   Note On 62, its Note Off, the hook's MIDI 2.0 Note Off 0x40803C00 for
+	   the still-sounding 60, then 0xF0060100; nothing dropped */
 	enter_alt1();
 	CHECK_EQ(midi2_active(), 1);
 	hal_send_note_on2(USBSTANDALONE, 0, 60, 0x8000);
-	hal_send_note_on2(USBMIDI, 0, 61, 0x8000);		/* not Standalone: untouched */
-	CHECK_EQ(host_in(w), 3);
+	CHECK_EQ(host_in(w), 2);
+	hal_send_note_on2(USBSTANDALONE, 0, 62, 0x9000);
+	hal_send_note_off2(USBSTANDALONE, 0, 62, 0);
 	host_out(to_midi1, 4);
 	__wrap_midi_parsers_poll();
 	CHECK_EQ(ump_stream_protocol(), UMP_PROTO_MIDI1);
 	CHECK_EQ(midi2_active(), 0);
 	CHECK_EQ(ump_tx_reserve_words(), 0);
-	CHECK_EQ(host_in(w), 6);
-	CHECK_EQ(w[0], 0x40803C00u);
-	CHECK_EQ(w[1], 0);
-	CHECK_EQ(w[2], 0xF0060100u);
+	CHECK_EQ(host_in(w), 10);
+	CHECK_EQ(w[0], 0x40903E00u);
+	CHECK_EQ(w[1], 0x90000000u);
+	CHECK_EQ(w[2], 0x40803E00u);
 	CHECK_EQ(w[3], 0);
+	CHECK_EQ(w[4], 0x40803C00u);
+	CHECK_EQ(w[5], 0);
+	CHECK_EQ(w[6], 0xF0060100u);
+	CHECK_EQ(w[7], 0);
 	CHECK_EQ(host_in(w), 0);
-	/* the sounding table was cleared: a later note off is sent once, as MT 2 */
+	/* the sounding bit was cleared: a later note off is sent once, as MT 2 */
 	hal_send_note_off2(USBSTANDALONE, 0, 60, 0);
 	CHECK_EQ(host_in(w), 1);
 	CHECK_EQ(w[0], 0x20803C00u);
@@ -411,6 +418,56 @@ static void test_protocol_change_releases_notes(void)
 	CHECK_EQ(ump_tx_reserve_words(), 2);
 }
 
+static void test_protocol_change_keeps_group1(void)
+{
+	static const uint32_t req[4] = {0xF0050100u, 0, 0, 0};
+	uint32_t w[16];
+	enter_alt1();
+	hal_send_note_on2(USBMIDI, 0, 61, 0x8000);
+	hal_send_note_on2(USBMIDI, 0, 63, 0x8000);
+	CHECK_EQ(host_in(w), 2);
+	hal_send_note_off2(USBMIDI, 0, 61, 0);			/* queued at the change */
+	hal_send_poly_pressure2(USBSTANDALONE, 0, 60, 5);	/* stale group 0 pressure */
+	CHECK_EQ(ump_tx_reserve_words(), 2);
+	host_out(req, 4);
+	__wrap_midi_parsers_poll();
+	CHECK_EQ(host_in(w), 5);
+	CHECK_EQ(w[0], 0x21803D00u);				/* group 1 Note Off survives */
+	CHECK_EQ(w[1], 0xF0060100u);				/* no Note Off for group 1 note 63 */
+	CHECK_EQ(host_in(w), 0);				/* group 0 pressure dropped */
+	CHECK_EQ(ump_tx_reserve_words(), 2);			/* note 63 still holds its reserve */
+	hal_send_note_off2(USBMIDI, 0, 63, 0);
+	CHECK_EQ(ump_tx_reserve_words(), 0);
+	CHECK_EQ(host_in(w), 1);
+	CHECK_EQ(w[0], 0x21803F00u);
+}
+
+static void test_protocol_change_notify_survives_full_control_ring(void)
+{
+	static const uint32_t req[4] = {0xF0050100u, 0, 0, 0};
+	static const uint32_t ctl[4] = {0xF0010101u, 0x82000300u, 0, 0};
+	static uint32_t got[256];
+	uint32_t w[16];
+	uint16_t n = 0, k;
+	int pushed = 0;
+	enter_alt1();
+	hal_send_note_on2(USBSTANDALONE, 0, 60, 0x8000);
+	CHECK_EQ(host_in(w), 2);
+	while (ump_tx_push(UMP_TX_CONTROL, ctl, 4) == 0)
+		pushed++;
+	CHECK_EQ(pushed, UMP_TX_CONTROL_WORDS / 4);
+	host_out(req, 4);
+	__wrap_midi_parsers_poll();
+	CHECK_EQ(ump_stream_protocol(), UMP_PROTO_MIDI1);
+	while ((k = host_in(w)) > 0 && n + k <= 256) {
+		memcpy(got + n, w, 4u * k);
+		n = (uint16_t)(n + k);
+	}
+	CHECK_EQ(n, UMP_TX_CONTROL_WORDS + 6);
+	CHECK_EQ(got[n - 6], 0x40803C00u);
+	CHECK_EQ(got[n - 4], 0xF0060100u);
+}
+
 static void test_protocol_change_keeps_queued_replies(void)
 {
 	static const uint32_t req[8] = {0xF0000101u, 0x00000001u, 0, 0,	/* EP discovery: info */
@@ -420,10 +477,11 @@ static void test_protocol_change_keeps_queued_replies(void)
 	hal_send_note_on2(USBSTANDALONE, 0, 60, 0x8000);
 	host_out(req, 8);
 	__wrap_midi_parsers_poll();
-	CHECK_EQ(host_in(w), 10);
+	CHECK_EQ(host_in(w), 12);
 	CHECK_EQ(w[0], 0xF0010101u);				/* Endpoint Info kept */
-	CHECK_EQ(w[4], 0x40803C00u);				/* the queued Note On was dropped */
-	CHECK_EQ(w[6], 0xF0060100u);
+	CHECK_EQ(w[4], 0x40903C00u);				/* queued Note On kept */
+	CHECK_EQ(w[6], 0x40803C00u);
+	CHECK_EQ(w[8], 0xF0060100u);
 }
 
 static void test_parsers_init_registers_hook(void)
@@ -556,6 +614,8 @@ void test_usb_data_all(void)
 	RUN(test_pressure2);
 	RUN(test_protocol_change_releases_notes);
 	RUN(test_protocol_change_keeps_queued_replies);
+	RUN(test_protocol_change_keeps_group1);
+	RUN(test_protocol_change_notify_survives_full_control_ring);
 	RUN(test_parsers_init_registers_hook);
 	RUN(test_hal_send_sysex_alt1);
 	RUN(test_hal_send_does_not_run_service);

@@ -87,9 +87,14 @@ static void push_text(uint32_t status, int fb_num, const char *s)
 	ump_tx_push(UMP_TX_CONTROL, out, words);
 }
 
-static void send_config_notify(void)
+/* behind_notes: after a protocol change the notification goes in the note
+ * FIFO, behind the note traffic already queued in the old protocol and the
+ * hook's Note Offs (control ring if the note FIFO is full). */
+static void send_config_notify(int behind_notes)
 {
 	uint32_t m[4] = {head(0, ST_CONFIG_NOTIFY, (uint32_t)g_protocol << 8), 0, 0, 0};
+	if (behind_notes && ump_tx_push(UMP_TX_NOTE, m, 4) == 0)
+		return;
 	push4(m);
 }
 
@@ -114,7 +119,7 @@ static void endpoint_discovery(const uint32_t msg[4])
 		push_text(ST_PRODUCT_ID, -1, id);
 	}
 	if (filter & 0x10)
-		send_config_notify();
+		send_config_notify(0);
 }
 
 static void fb_discovery(const uint32_t msg[4])
@@ -153,7 +158,7 @@ int ump_stream_handle(const uint32_t msg[4])
 			g_protocol = want;
 			changed = 1;
 		}
-		send_config_notify();
+		send_config_notify(changed);
 		break;
 	}
 	default:
