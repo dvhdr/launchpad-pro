@@ -52,13 +52,9 @@
 //______________________________________________________________________________
 
 #define PAD_INDEXES 100
-#define NO_ADC 0xFF
 
 // store ADC frame pointer
 static const u16 *g_ADC = 0;
-
-// inverse of ADC_MAP: pad index -> ADC channel
-static u8 g_adc_of[PAD_INDEXES];
 
 // 16-bit velocity of each held pad (0 = not held by us)
 static u16 g_vel[PAD_INDEXES];
@@ -102,12 +98,14 @@ void app_surface_event(u8 type, u8 index, u8 value)
             
             if (value)
             {
-                u8 adc = g_adc_of[index];
+                // ADC_Max is indexed by library pad slot and still holds the
+                // peak that triggered this press (see platform/pads.h)
+                u8 slot = pad_slot(index);
                 u16 v = 0;
                 
-                if (adc != NO_ADC)
+                if (slot != PAD_NO_SLOT)
                 {
-                    v = (u16)ump_scale_up(ADC_Max[adc] & 0x0FFF, 12, 16);
+                    v = pad_peak_to_velocity(ADC_Max[slot]);
                 }
                 
                 g_vel[index] = v;
@@ -203,16 +201,6 @@ void app_timer_event()
 
 void app_init(const u16 *adc_raw)
 {
-    for (int i = 0; i < PAD_INDEXES; ++i)
-    {
-        g_adc_of[i] = NO_ADC;
-    }
-    
-    for (int i = 0; i < PAD_COUNT; ++i)
-    {
-        g_adc_of[ADC_MAP[i]] = (u8)i;
-    }
-    
     // store off the raw ADC frame pointer for later use
     g_ADC = adc_raw;
     

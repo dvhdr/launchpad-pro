@@ -12,7 +12,8 @@ repository.
 
 - Pad press: a MIDI 2.0 Note On on the Standalone port (UMP group 0), channel
   1, note number = pad index (pad 11 = note 11), with a 16-bit velocity scaled
-  up from the 12-bit pad pressure peak. Pad release: Note Off.
+  up from the library's 10-bit pad pressure peak (`ADC_Max`). Pad release:
+  Note Off.
 - The pad lights while held, brighter for harder hits. Pad pressure while
   held is sent as Poly Pressure on the Standalone port (32-bit in the MIDI 2.0
   Protocol).
@@ -125,9 +126,12 @@ Expected, to verify:
 
 - each hit gives a Note On with a 16-bit velocity (not only multiples of 512
   as would come from 7-bit scaling), with soft hits low and hard hits high.
-  The softest hit that triggers a note gives about 0x1500 (the pad trigger
-  threshold), not a value near 0. Below 0x8000 the values step by 16 (the pad
-  peak is 12 bits); above it the steps are 16 or 17;
+  The softest hit that triggers a note gives about 0x5400 (the library only
+  reports a press once the 10-bit peak passes about 336), not a value near 0.
+  Below 0x8000 the values step by 64 (the pad peak is 10 bits); above it the
+  steps are 64 or 65. Hard hits reach 0xFFFF. (The first stage 1 image read
+  the wrong pad's peak and gave 0x0010 to 0x0050 for every hit; if you see
+  values like that, you are on the old image);
 - each release gives a Note Off;
 - the pad lights, brighter for harder hits;
 - MIDI clock arrives on group 0 about every 20 ms.
