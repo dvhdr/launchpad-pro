@@ -191,8 +191,8 @@ from this tree, without the instrument, still compile and work unchanged.
   configuration. `c_midi.o` also calls `SetEPRxValid` on EP1 by itself. In
   alt 1, all three must be neutralised, by `--wrap` of `usbmidi_poll` and
   `midi_flush_windows_buffer` (called from `main.o`, so wrappable) and by
-  clearing `MIDIToHst` on the switch to alt 1. Otherwise `c_midi.o` gets
-  replaced in full (see the open question on hardware testing).
+  clearing `MIDIToHst` on the switch to alt 1. If hardware testing shows the
+  wraps aren't enough, `c_midi.o` gets replaced in full.
 
 ### 3. Pad engine (`src/pads/`)
 
@@ -312,6 +312,24 @@ bright):
   pressure; check that MIDI 1.0 apps still see the ports; check MIDI 1.0
   fallback on a machine without MIDI Services; check the velocity feel of
   both modes.
+
+## Delivery stages
+
+The player has the hardware and will test on Windows at the checkpoint.
+
+1. **Transport milestone (hardware checkpoint).** Build the fix, trim the
+   archive, add descriptors with alt 0 and alt 1, add GTB, add the UMP stream
+   replies, and add the `c_midi` neutralisation. Install a minimal test app:
+   pads send MIDI 2.0 notes with 16-bit Zero-latency velocity. The player
+   flashes it and reports:
+   - whether Windows MIDI Services lists a MIDI 2.0 endpoint with the right
+     name and two function blocks;
+   - whether notes arrive cleanly;
+   - whether MIDI 1.0 fallback still works.
+   If something fails, fix it here, or replace `c_midi.o`, before going on.
+2. **Instrument.** Scale engine, pad engine (both velocity modes, curves,
+   pressure), menu, persistence, all host-tested.
+3. **Final hardware pass.** The full checklist in section 7.
 
 ## Left to the builder
 
